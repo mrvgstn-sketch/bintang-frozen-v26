@@ -1,28 +1,27 @@
-const SUPABASE_URL="https://psynkzbwusjhsigdvkkf.supabase.co";
-const SUPABASE_KEY="sb_publishable_AFyEeOTyJxzhR0omzPaZ2A_oJSfrgGC";
+const SUPABASE_URL = "https://psynkzbwusjhsigdvkkf.supabase.co";
+const SUPABASE_KEY = "sb_publishable_AFyEeOTyJxzhR0omzPaZ2A_oJSfrgGC";
 
-const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-
-const $=id=>document.getElementById(id);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
 
 async function login(){
-  const email=$("email").value.trim();
-  const password=$("pass").value;
+  const email = $("email").value.trim();
+  const password = $("pass").value;
 
-  if(!email||!password){
-    $("msg").textContent="Email dan password wajib diisi.";
+  if(!email || !password){
+    $("msg").textContent = "Email dan password wajib diisi.";
     return;
   }
 
-  $("msg").textContent="Memproses...";
+  $("msg").textContent = "Memproses...";
 
-  const {error}=await sb.auth.signInWithPassword({
+  const {error} = await sb.auth.signInWithPassword({
     email,
     password
   });
 
   if(error){
-    $("msg").textContent=error.message;
+    $("msg").textContent = error.message;
     return;
   }
 
@@ -38,15 +37,15 @@ async function logout(){
 }
 
 async function forgotPassword(){
-  const email=$("email").value.trim();
+  const email = $("email").value.trim();
 
   if(!email){
     alert("Isi email terlebih dahulu.");
     return;
   }
 
-  const {error}=await sb.auth.resetPasswordForEmail(email,{
-    redirectTo:location.href
+  const {error} = await sb.auth.resetPasswordForEmail(email,{
+    redirectTo: location.href
   });
 
   if(error){
@@ -56,19 +55,333 @@ async function forgotPassword(){
   }
 }
 
+/* =========================
+   CRUD UMUM
+========================= */
+
+const configs = {
+
+  customers:{
+    title:"Customer",
+    target:"customersData",
+    table:"customers",
+    fields:[
+      ["name","Nama Customer","text"],
+      ["phone","No. HP","text"],
+      ["address","Alamat","text"]
+    ]
+  },
+
+  products:{
+    title:"Produk",
+    target:"productsData",
+    table:"products",
+    fields:[
+      ["name","Nama Produk","text"],
+      ["unit","Satuan","text"],
+      ["selling_price","Harga Jual","number"]
+    ]
+  },
+
+  suppliers:{
+    title:"Supplier",
+    target:"suppliersData",
+    table:"suppliers",
+    fields:[
+      ["name","Nama Supplier","text"],
+      ["phone","No. HP","text"],
+      ["address","Alamat","text"]
+    ]
+  },
+
+  inbound:{
+    title:"Barang Masuk",
+    target:"inboundData",
+    table:"inbound_transactions",
+    fields:[
+      ["transaction_no","No. Transaksi","text"],
+      ["transaction_date","Tanggal","date"],
+      ["status","Status","text"]
+    ]
+  },
+
+  outbound:{
+    title:"Barang Keluar",
+    target:"outboundData",
+    table:"outbound_transactions",
+    fields:[
+      ["transaction_no","No. Transaksi","text"],
+      ["transaction_date","Tanggal","date"],
+      ["status","Status","text"]
+    ]
+  },
+
+  finance:{
+    title:"Pengeluaran",
+    target:"financeData",
+    table:"expenses",
+    fields:[
+      ["expense_no","No. Pengeluaran","text"],
+      ["expense_date","Tanggal","date"],
+      ["category","Kategori","text"],
+      ["amount","Jumlah","number"]
+    ]
+  },
+
+  commissions:{
+    title:"Komisi Marketing",
+    target:"commissionData",
+    table:"commissions",
+    fields:[
+      ["commission_no","No. Komisi","text"],
+      ["commission_date","Tanggal","date"],
+      ["total_kg","Total KG","number"],
+      ["total_commission","Total Komisi","number"],
+      ["status","Status","text"]
+    ]
+  }
+};
+
+function esc(v){
+  return String(v ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+
+function rupiah(v){
+  const n = Number(v || 0);
+  return n.toLocaleString("id-ID");
+}
+
+async function loadCRUD(key){
+
+  const c = configs[key];
+  if(!c) return;
+
+  const box = $(c.target);
+
+  box.innerHTML = `
+    <div class="card">
+
+      <button onclick="showForm('${key}')">
+        + Tambah ${c.title}
+      </button>
+
+      <div id="${key}Form" style="margin-top:15px"></div>
+
+    </div>
+
+    <div id="${key}Table"></div>
+  `;
+
+  await refreshCRUD(key);
+}
+
+async function refreshCRUD(key){
+
+  const c = configs[key];
+
+  const {data,error} = await sb
+    .from(c.table)
+    .select("*")
+    .order("id",{ascending:false})
+    .limit(200);
+
+  const box = $(key+"Table");
+
+  if(error){
+    box.innerHTML = `
+      <div class="card">
+        <b>Gagal memuat data</b>
+        <p>${esc(error.message)}</p>
+      </div>`;
+    return;
+  }
+
+  if(!data || !data.length){
+    box.innerHTML = `
+      <div class="card">
+        Belum ada data.
+      </div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="card wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            ${c.fields.map(f=>`<th>${f[1]}</th>`).join("")}
+            <th>Aksi</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${data.map(row=>`
+            <tr>
+              ${c.fields.map(f=>`
+                <td>
+                  ${
+                    f[0].includes("price") ||
+                    f[0].includes("amount") ||
+                    f[0].includes("commission")
+                    ? rupiah(row[f[0]])
+                    : esc(row[f[0]])
+                  }
+                </td>
+              `).join("")}
+
+              <td>
+                <button onclick='editRow(${JSON.stringify(key)},${JSON.stringify(row)})'>
+                  Edit
+                </button>
+
+                <button onclick='deleteRow("${key}","${row.id}")'>
+                  Hapus
+                </button>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function showForm(key,row=null){
+
+  const c = configs[key];
+  const box = $(key+"Form");
+
+  box.innerHTML = `
+    <div class="card">
+
+      <h3>${row ? "Edit" : "Tambah"} ${c.title}</h3>
+
+      ${c.fields.map(f=>`
+        <label>${f[1]}</label>
+
+        <input
+          id="${key}_${f[0]}"
+          type="${f[2]}"
+          value="${esc(row ? row[f[0]] : "")}"
+          placeholder="${f[1]}"
+        >
+      `).join("")}
+
+      <button onclick="saveRow('${key}',${row ? row.id : "null"})">
+        Simpan
+      </button>
+
+      <button onclick="cancelForm('${key}')">
+        Batal
+      </button>
+
+    </div>
+  `;
+}
+
+function editRow(key,row){
+  showForm(key,row);
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function cancelForm(key){
+  $(key+"Form").innerHTML = "";
+}
+
+async function saveRow(key,id){
+
+  const c = configs[key];
+  const obj = {};
+
+  for(const f of c.fields){
+
+    let value = $(`${key}_${f[0]}`).value;
+
+    if(f[2] === "number"){
+      value = Number(value || 0);
+    }
+
+    obj[f[0]] = value;
+  }
+
+  let result;
+
+  if(id){
+
+    result = await sb
+      .from(c.table)
+      .update(obj)
+      .eq("id",id);
+
+  }else{
+
+    result = await sb
+      .from(c.table)
+      .insert(obj);
+
+  }
+
+  if(result.error){
+
+    alert("Gagal menyimpan:\n"+result.error.message);
+    return;
+
+  }
+
+  alert("Data berhasil disimpan.");
+
+  cancelForm(key);
+
+  await refreshCRUD(key);
+}
+
+async function deleteRow(key,id){
+
+  if(!confirm("Yakin ingin menghapus data ini?")){
+    return;
+  }
+
+  const c = configs[key];
+
+  const {error} = await sb
+    .from(c.table)
+    .delete()
+    .eq("id",id);
+
+  if(error){
+
+    alert("Gagal menghapus:\n"+error.message);
+    return;
+
+  }
+
+  alert("Data berhasil dihapus.");
+
+  await refreshCRUD(key);
+}
+
+/* =========================
+   DASHBOARD
+========================= */
+
 async function getCount(table){
-  const {count,error}=await sb
+
+  const {count,error} = await sb
     .from(table)
     .select("*",{count:"exact",head:true});
 
-  if(error) throw error;
+  if(error) return 0;
 
-  return count||0;
+  return count || 0;
 }
 
 async function loadDash(){
 
-  const tables=[
+  const tables = [
     ["products","Produk"],
     ["customers","Customer"],
     ["inbound_transactions","Barang Masuk"],
@@ -80,20 +393,15 @@ async function loadDash(){
   const results=[];
 
   for(const x of tables){
-    try{
-      results.push([
-        x[1],
-        await getCount(x[0])
-      ]);
-    }catch(e){
-      results.push([
-        x[1],
-        "—"
-      ]);
-    }
+
+    results.push([
+      x[1],
+      await getCount(x[0])
+    ]);
+
   }
 
-  $("stats").innerHTML=results.map(x=>`
+  $("stats").innerHTML = results.map(x=>`
     <div class="stat">
       <span>${x[0]}</span>
       <b>${x[1]}</b>
@@ -101,55 +409,146 @@ async function loadDash(){
   `).join("");
 }
 
-async function loadTable(tableName,target,columns){
+/* =========================
+   STOK
+========================= */
 
-  const {data,error}=await sb
-    .from(tableName)
+async function loadStock(){
+
+  const {data,error} = await sb
+    .from("current_stock")
     .select("*")
     .limit(200);
 
+  const box = $("stockData");
+
   if(error){
-    $(target).innerHTML=`
+
+    box.innerHTML = `
       <div class="card">
-        <b>Gagal memuat data</b>
-        <p>${error.message}</p>
-      </div>`;
+        <b>Gagal memuat stok</b>
+        <p>${esc(error.message)}</p>
+      </div>
+    `;
+
     return;
   }
 
-  if(!data||!data.length){
-    $(target).innerHTML=`
+  if(!data || !data.length){
+
+    box.innerHTML = `
       <div class="card">
-        Belum ada data.
-      </div>`;
+        Belum ada data stok.
+      </div>
+    `;
+
     return;
   }
 
-  $(target).innerHTML=`
+  box.innerHTML = `
     <div class="card wrap">
       <table class="table">
+
         <thead>
           <tr>
-            ${columns.map(x=>`<th>${x}</th>`).join("")}
+            <th>Produk</th>
+            <th>Stok</th>
+            <th>Satuan</th>
           </tr>
         </thead>
+
         <tbody>
+
           ${data.map(r=>`
             <tr>
-              ${columns.map(x=>`
-                <td>${r[x]??""}</td>
-              `).join("")}
+              <td>${esc(r.name)}</td>
+              <td>${esc(r.stock_qty)}</td>
+              <td>${esc(r.unit)}</td>
             </tr>
           `).join("")}
+
         </tbody>
+
       </table>
     </div>
   `;
 }
 
+/* =========================
+   AUDIT
+========================= */
+
+async function loadAudit(){
+
+  const {data,error} = await sb
+    .from("audit_logs")
+    .select("*")
+    .order("id",{ascending:false})
+    .limit(200);
+
+  const box = $("auditData");
+
+  if(error){
+
+    box.innerHTML = `
+      <div class="card">
+        ${esc(error.message)}
+      </div>
+    `;
+
+    return;
+  }
+
+  if(!data || !data.length){
+
+    box.innerHTML = `
+      <div class="card">
+        Belum ada log.
+      </div>
+    `;
+
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="card wrap">
+
+      <table class="table">
+
+        <thead>
+          <tr>
+            <th>Waktu</th>
+            <th>Aksi</th>
+            <th>Jenis</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          ${data.map(r=>`
+            <tr>
+              <td>${esc(r.created_at)}</td>
+              <td>${esc(r.action)}</td>
+              <td>${esc(r.entity_type)}</td>
+            </tr>
+          `).join("")}
+
+        </tbody>
+
+      </table>
+
+    </div>
+  `;
+}
+
+/* =========================
+   NAVIGASI
+========================= */
+
 async function page(id){
 
-  document.querySelectorAll("main>section")
+  document
+    .querySelectorAll("main>section")
     .forEach(x=>x.classList.add("hidden"));
 
   const section=$(id);
@@ -160,97 +559,64 @@ async function page(id){
 
   if(id==="dash"){
     await loadDash();
+    return;
   }
 
   if(id==="customers"){
-    await loadTable(
-      "customers",
-      "customersData",
-      ["name","phone","address"]
-    );
+    await loadCRUD("customers");
+    return;
   }
 
   if(id==="products"){
-    await loadTable(
-      "products",
-      "productsData",
-      ["name","unit","selling_price"]
-    );
+    await loadCRUD("products");
+    return;
   }
 
   if(id==="suppliers"){
-    await loadTable(
-      "suppliers",
-      "suppliersData",
-      ["name","phone","address"]
-    );
+    await loadCRUD("suppliers");
+    return;
   }
 
   if(id==="stock"){
-    await loadTable(
-      "current_stock",
-      "stockData",
-      ["name","stock_qty","unit"]
-    );
+    await loadStock();
+    return;
   }
 
   if(id==="inbound"){
-    await loadTable(
-      "inbound_transactions",
-      "inboundData",
-      ["transaction_no","transaction_date","status"]
-    );
+    await loadCRUD("inbound");
+    return;
   }
 
   if(id==="outbound"){
-    await loadTable(
-      "outbound_transactions",
-      "outboundData",
-      ["transaction_no","transaction_date","status"]
-    );
+    await loadCRUD("outbound");
+    return;
   }
 
   if(id==="finance"){
-    await loadTable(
-      "expenses",
-      "financeData",
-      ["expense_no","expense_date","category","amount"]
-    );
+    await loadCRUD("finance");
+    return;
   }
 
   if(id==="commissions"){
-    await loadTable(
-      "commissions",
-      "commissionData",
-      ["commission_no","commission_date","total_kg","total_commission","status"]
-    );
+    await loadCRUD("commissions");
+    return;
   }
 
   if(id==="audit"){
-    await loadTable(
-      "audit_logs",
-      "auditData",
-      ["created_at","action","entity_type"]
-    );
+    await loadAudit();
+    return;
   }
 }
 
-async function checkSession(){
+/* =========================
+   EXPORT / CETAK
+========================= */
 
-  const {data}=await sb.auth.getSession();
+function pdf(){
 
-  if(data.session){
+  window.print();
 
-    $("login").classList.add("hidden");
-    $("app").classList.remove("hidden");
-
-    await page("dash");
-  }
 }
 
-window.login=login;
-window.logout=logout;
-window.forgotPassword=forgotPassword;
-window.page=page;
-
-checkSession();
+/* =========================
+   SESSION
