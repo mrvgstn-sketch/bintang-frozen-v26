@@ -416,22 +416,66 @@ const BF_CLOUD_KEY="sb_publishable_tQVjtPgSCCY_hj2hd4WjzQ_y0ag0cG7";
     return data;
   }
   async function push(){
-    if(!cloud||busy) return;
-    busy=true;
-    try{
-      await cloud.from("bf_cloud_state").upsert({store_token:BF_STORE_TOKEN,data:snapshot(),updated_at:new Date().toISOString()},{onConflict:"store_token"});
-    }catch(e){ console.warn("Cloud sync gagal",e); }
+  if(!cloud || busy) return;
+
+  busy=true;
+
+  try{
+    const { data: authData, error: authError } =
+      await cloud.auth.getUser();
+
+    if(authError || !authData.user){
+      console.warn("User belum login", authError);
+      return;
+    }
+
+    await cloud
+      .from("bf_cloud_state")
+      .upsert({
+        user_id: authData.user.id,
+        data: snapshot(),
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: "user_id"
+      });
+
+  }catch(e){
+    console.warn("Cloud sync gagal",e);
+  }finally{
     busy=false;
   }
+}
   async function pull(){
-    if(!cloud) return false;
-    try{
-      const r=await cloud.from("bf_cloud_state").select("data").eq("store_token",BF_STORE_TOKEN).maybeSingle();
-      if(r.error||!r.data||!r.data.data) return false;
-      Object.entries(r.data.data).forEach(([k,v])=>localStorage.setItem(k,v));
-      return true;
-    }catch(e){ console.warn("Cloud pull gagal",e); return false; }
+  if(!cloud) return false;
+
+  try{
+    const { data: authData, error: authError } =
+      await cloud.auth.getUser();
+
+    if(authError || !authData.user){
+      console.warn("User belum login", authError);
+      return false;
+    }
+
+    const r = await cloud
+      .from("bf_cloud_state")
+      .select("data")
+      .eq("user_id", authData.user.id)
+      .maybeSingle();
+
+    if(r.error || !r.data || !r.data.data) return false;
+
+    Object.entries(r.data.data).forEach(([k,v])=>{
+      localStorage.setItem(k,v);
+    });
+
+    return true;
+
+  }catch(e){
+    console.warn("Cloud pull gagal",e);
+    return false;
   }
+}
   function watch(){
     const originalSet=localStorage.setItem.bind(localStorage);
     localStorage.setItem=function(k,v){
