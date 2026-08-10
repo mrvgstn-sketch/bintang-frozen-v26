@@ -1,4 +1,4 @@
-const CACHE_NAME = "bf-v26-20260811-0443";
+const CACHE_NAME = "bf-v26-20260811-0615";
 
 const APP_SHELL = [
   "./",
@@ -9,7 +9,6 @@ const APP_SHELL = [
   "./icons/icon-512.png"
 ];
 
-// Install: simpan file utama aplikasi ke cache
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -18,24 +17,20 @@ self.addEventListener("install", event => {
   );
 });
 
-// Activate: hapus cache versi lama
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
       .then(keys =>
         Promise.all(
           keys
-            .filter(key => key !== CACHE_NAME)
-            .map(key => caches.delete(key))
+            .filter(k => k !== CACHE_NAME)
+            .map(k => caches.delete(k))
         )
       )
       .then(() => self.clients.claim())
   );
 });
 
-// Fetch:
-// - Navigasi/HTML: network-first agar update cepat masuk
-// - Asset lainnya: cache-first dengan fallback network
 self.addEventListener("fetch", event => {
   const request = event.request;
 
@@ -47,15 +42,14 @@ self.addEventListener("fetch", event => {
         .then(response => {
           const copy = response.clone();
 
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put("./index.html", copy);
-          });
+          caches.open(CACHE_NAME)
+            .then(cache => cache.put("./index.html", copy));
 
           return response;
         })
         .catch(() =>
           caches.match("./index.html")
-            .then(cached => cached || caches.match("./"))
+            .then(c => c || caches.match("./"))
         )
     );
 
@@ -63,25 +57,23 @@ self.addEventListener("fetch", event => {
   }
 
   event.respondWith(
-    caches.match(request)
-      .then(cached => {
-        if (cached) return cached;
+    caches.match(request).then(cached => {
+      const network = fetch(request).then(response => {
+        if (
+          response &&
+          response.status === 200 &&
+          response.type === "basic"
+        ) {
+          const copy = response.clone();
 
-        return fetch(request).then(response => {
-          if (
-            response &&
-            response.status === 200 &&
-            response.type === "basic"
-          ) {
-            const copy = response.clone();
+          caches.open(CACHE_NAME)
+            .then(cache => cache.put(request, copy));
+        }
 
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(request, copy);
-            });
-          }
+        return response;
+      });
 
-          return response;
-        });
-      })
+      return cached || network;
+    })
   );
 });
