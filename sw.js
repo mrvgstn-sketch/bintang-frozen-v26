@@ -1,8 +1,6 @@
-/* Bintang Frozen V26 Service Worker
- * Increment CACHE_VERSION on every deploy.
- */
+/* Bintang Frozen V26 Service Worker */
 
-const CACHE_VERSION = 'bf-v26-20260811-1905';
+const CACHE_VERSION = 'bf-v26-20260811-1945';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const CORE = [
@@ -20,9 +18,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches
       .open(STATIC_CACHE)
-      .then(cache =>
-        cache.addAll(CORE).catch(() => {})
-      )
+      .then(cache => cache.addAll(CORE).catch(() => {}))
       .then(() => self.skipWaiting())
   );
 });
@@ -31,7 +27,7 @@ self.addEventListener('install', event => {
    ACTIVATE
    ========================= */
 
-// Hapus cache versi aplikasi sebelumnya.
+// Hapus cache versi lama.
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches
@@ -54,17 +50,14 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
 
-  // Hanya menangani request GET.
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
 
   /*
-   * SUPABASE / AUTH
-   *
-   * Jangan cache request Supabase.
-   * Login, database, realtime, dan sinkronisasi
-   * harus menggunakan data dari jaringan.
+   * Jangan cache Supabase / Auth.
+   * Login, database, realtime dan sinkronisasi
+   * harus tetap menggunakan jaringan.
    */
   if (
     url.hostname.includes('supabase.co') ||
@@ -75,9 +68,8 @@ self.addEventListener('fetch', event => {
 
   /*
    * INDEX.HTML / NAVIGASI
-   *
-   * Network-first agar update terbaru dari
-   * GitHub Pages langsung digunakan.
+   * Network-first supaya update GitHub Pages
+   * cepat masuk ke HP pengguna.
    */
   if (req.mode === 'navigate') {
     event.respondWith(
@@ -85,23 +77,17 @@ self.addEventListener('fetch', event => {
         .then(response => {
           const copy = response.clone();
 
-          caches
-            .open(STATIC_CACHE)
-            .then(cache => {
-              cache.put('./index.html', copy);
-            });
+          caches.open(STATIC_CACHE).then(cache => {
+            cache.put('./index.html', copy);
+          });
 
           return response;
         })
-        .catch(() => {
-          // Jika offline, gunakan versi index.html
-          // terakhir yang berhasil disimpan.
-          return caches
+        .catch(() =>
+          caches
             .match('./index.html')
-            .then(cached => {
-              return cached || caches.match('./');
-            });
-        })
+            .then(cached => cached || caches.match('./'))
+        )
     );
 
     return;
@@ -109,8 +95,7 @@ self.addEventListener('fetch', event => {
 
   /*
    * ASSET STATIS
-   *
-   * Cache-first untuk aset lokal PWA.
+   * Cache-first untuk PWA/offline.
    */
   event.respondWith(
     caches.match(req).then(cached => {
@@ -119,10 +104,6 @@ self.addEventListener('fetch', event => {
       }
 
       return fetch(req).then(response => {
-        /*
-         * Hanya cache response yang berhasil
-         * dan berasal dari aplikasi sendiri.
-         */
         if (
           response &&
           response.ok &&
@@ -130,15 +111,11 @@ self.addEventListener('fetch', event => {
         ) {
           const copy = response.clone();
 
-          caches
-            .open(STATIC_CACHE)
-            .then(cache => {
-              cache.put(req, copy);
-            });
+          caches.open(STATIC_CACHE).then(cache => {
+            cache.put(req, copy);
+          });
         }
 
         return response;
       });
     })
-  );
-});
