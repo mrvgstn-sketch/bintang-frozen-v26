@@ -2,7 +2,7 @@
  * Increment CACHE_VERSION on every deploy.
  */
 
-const CACHE_VERSION = 'bf-v26-20260811-1745';
+const CACHE_VERSION = 'bf-v26-20260811-1815';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const CORE = [
@@ -31,7 +31,7 @@ self.addEventListener('install', event => {
    ACTIVATE
    ========================= */
 
-// Hapus cache versi aplikasi sebelumnya.
+// Hapus cache aplikasi versi sebelumnya.
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches
@@ -54,14 +54,14 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
 
-  // Hanya menangani GET.
+  // Hanya menangani request GET.
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
 
   /*
    * Jangan cache Supabase / Auth.
-   * Data cloud harus selalu berasal dari jaringan/Supabase.
+   * Data cloud harus selalu menggunakan koneksi langsung.
    */
   if (
     url.hostname.includes('supabase.co') ||
@@ -72,7 +72,8 @@ self.addEventListener('fetch', event => {
 
   /*
    * INDEX / NAVIGASI
-   * Network-first agar deploy terbaru segera terbaca.
+   * Network-first agar versi terbaru dari GitHub Pages
+   * segera digunakan setelah deploy.
    */
   if (req.mode === 'navigate') {
     event.respondWith(
@@ -100,7 +101,7 @@ self.addEventListener('fetch', event => {
 
   /*
    * ASSET STATIS
-   * Cache-first.
+   * Cache-first untuk PWA/offline.
    */
   event.respondWith(
     caches.match(req).then(cached => {
