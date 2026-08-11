@@ -1,6 +1,6 @@
 /* Bintang Frozen V26 Service Worker */
 
-const CACHE_VERSION = 'bf-v26-20260812-0348';
+const CACHE_VERSION = 'bf-v26-20260812-0408';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const CORE = [
@@ -57,8 +57,8 @@ self.addEventListener('fetch', event => {
   /*
    * SUPABASE / AUTH
    *
-   * Jangan cache request database,
-   * autentikasi, realtime, atau sinkronisasi.
+   * Jangan cache database, autentikasi,
+   * realtime, atau sinkronisasi.
    */
   if (
     url.hostname.includes('supabase.co') ||
@@ -70,12 +70,17 @@ self.addEventListener('fetch', event => {
   /*
    * NAVIGASI / INDEX.HTML
    *
-   * Network-first agar setelah deploy baru,
-   * HP mengambil index.html terbaru.
+   * Network-first + no-store.
+   *
+   * Penting untuk pull-to-refresh:
+   * browser harus mencoba mengambil index.html
+   * terbaru dari GitHub Pages.
    */
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req)
+      fetch(req, {
+        cache: 'no-store'
+      })
         .then(response => {
           const copy = response.clone();
 
@@ -89,8 +94,9 @@ self.addEventListener('fetch', event => {
         })
         .catch(() => {
           /*
-           * Jika sedang offline,
-           * gunakan index.html terakhir.
+           * Jika perangkat offline,
+           * gunakan index.html terakhir
+           * yang berhasil disimpan.
            */
           return caches
             .match('./index.html')
@@ -116,7 +122,7 @@ self.addEventListener('fetch', event => {
 
       return fetch(req).then(response => {
         /*
-         * Hanya cache response yang berhasil
+         * Hanya simpan response yang berhasil
          * dan berasal dari domain aplikasi sendiri.
          */
         if (
