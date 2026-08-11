@@ -1,6 +1,6 @@
 /* Bintang Frozen V26 Service Worker */
 
-const CACHE_VERSION = 'bf-v26-20260812-0253';
+const CACHE_VERSION = 'bf-v26-20260812-0304';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const CORE = [
@@ -50,7 +50,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
 
-  // Hanya tangani request GET.
+  // Hanya menangani request GET.
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
@@ -59,7 +59,7 @@ self.addEventListener('fetch', event => {
    * SUPABASE / AUTH
    *
    * Database, login, realtime dan sinkronisasi
-   * tidak boleh dilayani dari cache.
+   * tidak disimpan di cache Service Worker.
    */
   if (
     url.hostname.includes('supabase.co') ||
@@ -71,8 +71,8 @@ self.addEventListener('fetch', event => {
   /*
    * INDEX.HTML / NAVIGASI
    *
-   * Network-first agar setelah update GitHub Pages,
-   * perangkat mencoba mengambil aplikasi terbaru.
+   * Network-first supaya aplikasi mencoba
+   * mengambil index.html terbaru dari GitHub Pages.
    */
   if (req.mode === 'navigate') {
     event.respondWith(
@@ -91,7 +91,7 @@ self.addEventListener('fetch', event => {
         .catch(() => {
           /*
            * Jika offline, gunakan index.html
-           * terakhir yang tersimpan.
+           * terakhir yang berhasil disimpan.
            */
           return caches
             .match('./index.html')
@@ -107,7 +107,7 @@ self.addEventListener('fetch', event => {
   /*
    * ASSET STATIS
    *
-   * Cache-first untuk aset lokal aplikasi/PWA.
+   * Cache-first untuk aset lokal PWA.
    */
   event.respondWith(
     caches.match(req).then(cached => {
@@ -117,7 +117,7 @@ self.addEventListener('fetch', event => {
 
       return fetch(req).then(response => {
         /*
-         * Hanya cache response yang berhasil
+         * Hanya simpan response yang berhasil
          * dan berasal dari domain aplikasi sendiri.
          */
         if (
