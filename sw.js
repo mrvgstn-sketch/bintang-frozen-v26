@@ -1,4 +1,5 @@
-const CACHE_NAME = "bf-v26-20260811-0544";
+const CACHE_VERSION = "bf-v26-20260811-1605";
+const CACHE_NAME = CACHE_VERSION;
 
 const APP_SHELL = [
   "./",
@@ -9,8 +10,10 @@ const APP_SHELL = [
   "./icons/icon-512.png"
 ];
 
-// INSTALL
-// Simpan file utama PWA ke cache.
+/* =========================
+   INSTALL
+   ========================= */
+
 self.addEventListener("install", event => {
   event.waitUntil(
     caches
@@ -20,8 +23,11 @@ self.addEventListener("install", event => {
   );
 });
 
-// ACTIVATE
-// Hapus seluruh cache Bintang Frozen versi sebelumnya.
+/* =========================
+   ACTIVATE
+   ========================= */
+
+// Hapus cache versi lama setiap deploy.
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches
@@ -37,15 +43,21 @@ self.addEventListener("activate", event => {
   );
 });
 
-// FETCH
+/* =========================
+   FETCH
+   ========================= */
+
 self.addEventListener("fetch", event => {
   const request = event.request;
 
-  // Hanya cache request GET.
+  // Hanya menangani request GET.
   if (request.method !== "GET") return;
 
-  // HTML / navigasi:
-  // Network-first supaya update GitHub Pages cepat diterima.
+  /*
+   * HTML / navigasi:
+   * network-first supaya index.html terbaru
+   * langsung digunakan setelah deploy.
+   */
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
@@ -68,12 +80,17 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  // Asset:
-  // Gunakan cache jika tersedia.
-  // Jika belum ada, ambil dari network dan simpan.
+  /*
+   * Asset statis:
+   * gunakan cache terlebih dahulu.
+   */
   event.respondWith(
     caches.match(request).then(cached => {
-      const network = fetch(request).then(response => {
+      if (cached) {
+        return cached;
+      }
+
+      return fetch(request).then(response => {
         if (
           response &&
           response.status === 200 &&
@@ -88,8 +105,6 @@ self.addEventListener("fetch", event => {
 
         return response;
       });
-
-      return cached || network;
     })
   );
 });
