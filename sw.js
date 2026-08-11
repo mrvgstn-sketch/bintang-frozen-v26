@@ -1,6 +1,6 @@
 /* Bintang Frozen V26 Service Worker */
 
-const CACHE_VERSION = 'bf-v26-20260812-0015';
+const CACHE_VERSION = 'bf-v26-20260812-0253';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const CORE = [
@@ -27,7 +27,7 @@ self.addEventListener('install', event => {
    ACTIVATE
    ========================= */
 
-// Hapus cache versi aplikasi sebelumnya.
+// Hapus cache aplikasi versi sebelumnya.
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches
@@ -50,7 +50,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
 
-  // Service Worker hanya menangani GET.
+  // Hanya tangani request GET.
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
@@ -58,8 +58,8 @@ self.addEventListener('fetch', event => {
   /*
    * SUPABASE / AUTH
    *
-   * Jangan cache request database,
-   * autentikasi, realtime, dan sinkronisasi.
+   * Database, login, realtime dan sinkronisasi
+   * tidak boleh dilayani dari cache.
    */
   if (
     url.hostname.includes('supabase.co') ||
@@ -69,13 +69,10 @@ self.addEventListener('fetch', event => {
   }
 
   /*
-   * NAVIGASI / INDEX.HTML
+   * INDEX.HTML / NAVIGASI
    *
-   * Network-first.
-   *
-   * Tujuannya agar setelah index.html baru
-   * di-upload ke GitHub Pages, perangkat
-   * mengambil aplikasi terbaru terlebih dahulu.
+   * Network-first agar setelah update GitHub Pages,
+   * perangkat mencoba mengambil aplikasi terbaru.
    */
   if (req.mode === 'navigate') {
     event.respondWith(
@@ -93,9 +90,8 @@ self.addEventListener('fetch', event => {
         })
         .catch(() => {
           /*
-           * Jika perangkat offline,
-           * buka index.html terakhir yang
-           * berhasil disimpan.
+           * Jika offline, gunakan index.html
+           * terakhir yang tersimpan.
            */
           return caches
             .match('./index.html')
@@ -111,7 +107,7 @@ self.addEventListener('fetch', event => {
   /*
    * ASSET STATIS
    *
-   * Cache-first untuk aset lokal PWA.
+   * Cache-first untuk aset lokal aplikasi/PWA.
    */
   event.respondWith(
     caches.match(req).then(cached => {
@@ -122,7 +118,7 @@ self.addEventListener('fetch', event => {
       return fetch(req).then(response => {
         /*
          * Hanya cache response yang berhasil
-         * dan berasal dari aplikasi sendiri.
+         * dan berasal dari domain aplikasi sendiri.
          */
         if (
           response &&
