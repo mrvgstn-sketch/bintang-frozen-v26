@@ -2,7 +2,7 @@
  * Increment CACHE_VERSION on every deploy.
  */
 
-const CACHE_VERSION = 'bf-v26-20260811-1832';
+const CACHE_VERSION = 'bf-v26-20260811-1905';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const CORE = [
@@ -31,7 +31,7 @@ self.addEventListener('install', event => {
    ACTIVATE
    ========================= */
 
-// Hapus seluruh cache aplikasi versi lama.
+// Hapus cache versi aplikasi sebelumnya.
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches
@@ -54,7 +54,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
 
-  // Service Worker hanya menangani request GET.
+  // Hanya menangani request GET.
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
@@ -62,8 +62,9 @@ self.addEventListener('fetch', event => {
   /*
    * SUPABASE / AUTH
    *
-   * Jangan cache request database dan autentikasi.
-   * Data harus tetap berasal dari Supabase.
+   * Jangan cache request Supabase.
+   * Login, database, realtime, dan sinkronisasi
+   * harus menggunakan data dari jaringan.
    */
   if (
     url.hostname.includes('supabase.co') ||
@@ -75,9 +76,8 @@ self.addEventListener('fetch', event => {
   /*
    * INDEX.HTML / NAVIGASI
    *
-   * Gunakan NETWORK-FIRST.
-   * Tujuannya agar setelah index.html baru di-upload
-   * ke GitHub Pages, aplikasi mengambil versi terbaru.
+   * Network-first agar update terbaru dari
+   * GitHub Pages langsung digunakan.
    */
   if (req.mode === 'navigate') {
     event.respondWith(
@@ -94,8 +94,8 @@ self.addEventListener('fetch', event => {
           return response;
         })
         .catch(() => {
-          // Jika offline, gunakan index.html terakhir
-          // yang berhasil disimpan.
+          // Jika offline, gunakan versi index.html
+          // terakhir yang berhasil disimpan.
           return caches
             .match('./index.html')
             .then(cached => {
@@ -110,7 +110,7 @@ self.addEventListener('fetch', event => {
   /*
    * ASSET STATIS
    *
-   * Cache-first untuk file lokal PWA.
+   * Cache-first untuk aset lokal PWA.
    */
   event.respondWith(
     caches.match(req).then(cached => {
@@ -120,9 +120,8 @@ self.addEventListener('fetch', event => {
 
       return fetch(req).then(response => {
         /*
-         * Hanya simpan response yang:
-         * - berhasil
-         * - berasal dari domain aplikasi sendiri
+         * Hanya cache response yang berhasil
+         * dan berasal dari aplikasi sendiri.
          */
         if (
           response &&
