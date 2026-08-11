@@ -1,6 +1,6 @@
 /* Bintang Frozen V26 Service Worker */
 
-const CACHE_VERSION = 'bf-v26-20260812-0304';
+const CACHE_VERSION = 'bf-v26-20260812-0340';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const CORE = [
@@ -58,8 +58,8 @@ self.addEventListener('fetch', event => {
   /*
    * SUPABASE / AUTH
    *
-   * Database, login, realtime dan sinkronisasi
-   * tidak disimpan di cache Service Worker.
+   * Database, autentikasi, realtime,
+   * dan sinkronisasi tidak menggunakan cache.
    */
   if (
     url.hostname.includes('supabase.co') ||
@@ -71,8 +71,8 @@ self.addEventListener('fetch', event => {
   /*
    * INDEX.HTML / NAVIGASI
    *
-   * Network-first supaya aplikasi mencoba
-   * mengambil index.html terbaru dari GitHub Pages.
+   * Network-first agar aplikasi mengambil
+   * index.html terbaru setelah deploy.
    */
   if (req.mode === 'navigate') {
     event.respondWith(
@@ -90,8 +90,9 @@ self.addEventListener('fetch', event => {
         })
         .catch(() => {
           /*
-           * Jika offline, gunakan index.html
-           * terakhir yang berhasil disimpan.
+           * Jika perangkat offline,
+           * gunakan index.html terakhir
+           * yang berhasil disimpan.
            */
           return caches
             .match('./index.html')
@@ -107,7 +108,7 @@ self.addEventListener('fetch', event => {
   /*
    * ASSET STATIS
    *
-   * Cache-first untuk aset lokal PWA.
+   * Cache-first untuk file lokal PWA.
    */
   event.respondWith(
     caches.match(req).then(cached => {
