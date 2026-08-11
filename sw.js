@@ -1,6 +1,6 @@
 /* Bintang Frozen V26 Service Worker */
 
-const CACHE_VERSION = 'bf-v26-20260812-0340';
+const CACHE_VERSION = 'bf-v26-20260812-0348';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const CORE = [
@@ -27,7 +27,6 @@ self.addEventListener('install', event => {
    ACTIVATE
    ========================= */
 
-// Hapus cache aplikasi versi sebelumnya.
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches
@@ -50,7 +49,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
 
-  // Hanya menangani request GET.
+  // Service Worker hanya menangani request GET.
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
@@ -58,8 +57,8 @@ self.addEventListener('fetch', event => {
   /*
    * SUPABASE / AUTH
    *
-   * Database, autentikasi, realtime,
-   * dan sinkronisasi tidak menggunakan cache.
+   * Jangan cache request database,
+   * autentikasi, realtime, atau sinkronisasi.
    */
   if (
     url.hostname.includes('supabase.co') ||
@@ -69,10 +68,10 @@ self.addEventListener('fetch', event => {
   }
 
   /*
-   * INDEX.HTML / NAVIGASI
+   * NAVIGASI / INDEX.HTML
    *
-   * Network-first agar aplikasi mengambil
-   * index.html terbaru setelah deploy.
+   * Network-first agar setelah deploy baru,
+   * HP mengambil index.html terbaru.
    */
   if (req.mode === 'navigate') {
     event.respondWith(
@@ -90,9 +89,8 @@ self.addEventListener('fetch', event => {
         })
         .catch(() => {
           /*
-           * Jika perangkat offline,
-           * gunakan index.html terakhir
-           * yang berhasil disimpan.
+           * Jika sedang offline,
+           * gunakan index.html terakhir.
            */
           return caches
             .match('./index.html')
@@ -118,7 +116,7 @@ self.addEventListener('fetch', event => {
 
       return fetch(req).then(response => {
         /*
-         * Hanya simpan response yang berhasil
+         * Hanya cache response yang berhasil
          * dan berasal dari domain aplikasi sendiri.
          */
         if (
