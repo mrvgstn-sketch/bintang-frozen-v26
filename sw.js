@@ -1,9 +1,8 @@
 /* Bintang Frozen V26 Service Worker
- * Deploy cache version: 2026-08-11.0443
  * Increment CACHE_VERSION on every deploy.
  */
 
-const CACHE_VERSION = 'bf-v26-20260811-1711';
+const CACHE_VERSION = 'bf-v26-20260811-1745';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const CORE = [
@@ -12,6 +11,10 @@ const CORE = [
   './manifest.webmanifest',
   './bintang-frozen-logo.png'
 ];
+
+/* =========================
+   INSTALL
+   ========================= */
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -24,6 +27,11 @@ self.addEventListener('install', event => {
   );
 });
 
+/* =========================
+   ACTIVATE
+   ========================= */
+
+// Hapus cache versi aplikasi sebelumnya.
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches
@@ -31,22 +39,30 @@ self.addEventListener('activate', event => {
       .then(keys =>
         Promise.all(
           keys
-            .filter(k => k !== STATIC_CACHE)
-            .map(k => caches.delete(k))
+            .filter(key => key !== STATIC_CACHE)
+            .map(key => caches.delete(key))
         )
       )
       .then(() => self.clients.claim())
   );
 });
 
+/* =========================
+   FETCH
+   ========================= */
+
 self.addEventListener('fetch', event => {
   const req = event.request;
 
+  // Hanya menangani GET.
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
 
-  // Jangan cache traffic Supabase / Auth / API.
+  /*
+   * Jangan cache Supabase / Auth.
+   * Data cloud harus selalu berasal dari jaringan/Supabase.
+   */
   if (
     url.hostname.includes('supabase.co') ||
     url.pathname.includes('/auth/')
@@ -54,51 +70,61 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Navigasi / index.html:
-  // network-first agar update aplikasi terbaru segera digunakan.
+  /*
+   * INDEX / NAVIGASI
+   * Network-first agar deploy terbaru segera terbaca.
+   */
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
-        .then(res => {
-          const copy = res.clone();
+        .then(response => {
+          const copy = response.clone();
 
           caches
             .open(STATIC_CACHE)
-            .then(cache => cache.put('./index.html', copy));
+            .then(cache => {
+              cache.put('./index.html', copy);
+            });
 
-          return res;
+          return response;
         })
-        .catch(() =>
-          caches
+        .catch(() => {
+          return caches
             .match('./index.html')
-            .then(r => r || caches.match('./'))
-        )
+            .then(cached => cached || caches.match('./'));
+        })
     );
 
     return;
   }
 
-  // Asset statis:
-  // gunakan cache bila tersedia, lalu simpan hasil network.
+  /*
+   * ASSET STATIS
+   * Cache-first.
+   */
   event.respondWith(
     caches.match(req).then(cached => {
-      const network = fetch(req)
-        .then(res => {
-          if (
-            res &&
-            res.ok &&
-            url.origin === self.location.origin
-          ) {
-            caches
-              .open(STATIC_CACHE)
-              .then(cache => cache.put(req, res.clone()));
-          }
+      if (cached) {
+        return cached;
+      }
 
-          return res;
-        })
-        .catch(() => cached);
+      return fetch(req).then(response => {
+        if (
+          response &&
+          response.ok &&
+          url.origin === self.location.origin
+        ) {
+          const copy = response.clone();
 
-      return cached || network;
+          caches
+            .open(STATIC_CACHE)
+            .then(cache => {
+              cache.put(req, copy);
+            });
+        }
+
+        return response;
+      });
     })
   );
 });
