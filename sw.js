@@ -1,110 +1,104 @@
-const CACHE_VERSION = "bf-v26-20260811-1605";
-const CACHE_NAME = CACHE_VERSION;
+/* Bintang Frozen V26 Service Worker
+ * Deploy cache version: 2026-08-11.0443
+ * Increment CACHE_VERSION on every deploy.
+ */
 
-const APP_SHELL = [
-  "./",
-  "./index.html",
-  "./manifest.webmanifest",
-  "./bintang-frozen-logo.png",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png"
+const CACHE_VERSION = 'bf-v26-20260811-1711';
+const STATIC_CACHE = `${CACHE_VERSION}-static`;
+
+const CORE = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './bintang-frozen-logo.png'
 ];
 
-/* =========================
-   INSTALL
-   ========================= */
-
-self.addEventListener("install", event => {
+self.addEventListener('install', event => {
   event.waitUntil(
     caches
-      .open(CACHE_NAME)
-      .then(cache => cache.addAll(APP_SHELL))
+      .open(STATIC_CACHE)
+      .then(cache =>
+        cache.addAll(CORE).catch(() => {})
+      )
       .then(() => self.skipWaiting())
   );
 });
 
-/* =========================
-   ACTIVATE
-   ========================= */
-
-// Hapus cache versi lama setiap deploy.
-self.addEventListener("activate", event => {
+self.addEventListener('activate', event => {
   event.waitUntil(
     caches
       .keys()
       .then(keys =>
         Promise.all(
           keys
-            .filter(key => key !== CACHE_NAME)
-            .map(key => caches.delete(key))
+            .filter(k => k !== STATIC_CACHE)
+            .map(k => caches.delete(k))
         )
       )
       .then(() => self.clients.claim())
   );
 });
 
-/* =========================
-   FETCH
-   ========================= */
+self.addEventListener('fetch', event => {
+  const req = event.request;
 
-self.addEventListener("fetch", event => {
-  const request = event.request;
+  if (req.method !== 'GET') return;
 
-  // Hanya menangani request GET.
-  if (request.method !== "GET") return;
+  const url = new URL(req.url);
 
-  /*
-   * HTML / navigasi:
-   * network-first supaya index.html terbaru
-   * langsung digunakan setelah deploy.
-   */
-  if (request.mode === "navigate") {
+  // Jangan cache traffic Supabase / Auth / API.
+  if (
+    url.hostname.includes('supabase.co') ||
+    url.pathname.includes('/auth/')
+  ) {
+    return;
+  }
+
+  // Navigasi / index.html:
+  // network-first agar update aplikasi terbaru segera digunakan.
+  if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then(response => {
-          const copy = response.clone();
+      fetch(req)
+        .then(res => {
+          const copy = res.clone();
 
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put("./index.html", copy);
-          });
+          caches
+            .open(STATIC_CACHE)
+            .then(cache => cache.put('./index.html', copy));
 
-          return response;
+          return res;
         })
-        .catch(() => {
-          return caches
-            .match("./index.html")
-            .then(cached => cached || caches.match("./"));
-        })
+        .catch(() =>
+          caches
+            .match('./index.html')
+            .then(r => r || caches.match('./'))
+        )
     );
 
     return;
   }
 
-  /*
-   * Asset statis:
-   * gunakan cache terlebih dahulu.
-   */
+  // Asset statis:
+  // gunakan cache bila tersedia, lalu simpan hasil network.
   event.respondWith(
-    caches.match(request).then(cached => {
-      if (cached) {
-        return cached;
-      }
+    caches.match(req).then(cached => {
+      const network = fetch(req)
+        .then(res => {
+          if (
+            res &&
+            res.ok &&
+            url.origin === self.location.origin
+          ) {
+            caches
+              .open(STATIC_CACHE)
+              .then(cache => cache.put(req, res.clone()));
+          }
 
-      return fetch(request).then(response => {
-        if (
-          response &&
-          response.status === 200 &&
-          response.type === "basic"
-        ) {
-          const copy = response.clone();
+          return res;
+        })
+        .catch(() => cached);
 
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(request, copy);
-          });
-        }
-
-        return response;
-      });
+      return cached || network;
     })
   );
 });
