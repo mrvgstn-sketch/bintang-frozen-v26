@@ -1,0 +1,11 @@
+{
+  "name": "Bintang Frozen V27",
+  "short_name": "BF V27",
+  "start_url": "./#/dashboard",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "icons": [
+    {"src":"assets/icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
