@@ -1,0 +1,19 @@
+BINTANG FROZEN V26 - REFRESH SAFE FIX
+Tanggal: 2026-08-12
+
+Perbaikan utama:
+1. Auth bootstrap single-flight: hanya satu boot auth berjalan pada satu waktu.
+2. SIGNED_IN tidak membuat boot kedua saat bootstrap refresh masih berjalan.
+3. TOKEN_REFRESHED tidak lagi menjalankan seluruh boot/UI ulang.
+4. bf:auth-ready hanya dipancarkan sekali per user aktif.
+5. Auth generation guard mencegah hasil query lama diterapkan setelah sign-out.
+6. Cloud sync dapat hidup kembali setelah logout -> login tanpa reload tab.
+7. Realtime channel dan polling tidak dipasang ganda untuk user yang sama.
+8. Realtime/polling/timer/cloud state dibersihkan saat sign-out.
+9. Service Worker cache dinaikkan ke bf-v26-20260812-0805-r2.
+10. Registrasi SW memakai sw.js?v=20260812-0805-r2 dan reg.update().
+
+Validasi:
+- 22 blok JavaScript pada index.html: syntax OK
+- sw.js: syntax OK
+- manifest.webmanifest: JSON OK
