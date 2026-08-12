@@ -1,0 +1,17 @@
+{
+  "name": "Bintang Frozen V26",
+  "short_name": "Bintang Frozen",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d1b3e",
+  "theme_color": "#0d1b3e",
+  "icons": [
+    {
+      "src": "./bintang-frozen-logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
