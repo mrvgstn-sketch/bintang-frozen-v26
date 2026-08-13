@@ -1,0 +1,134 @@
+{
+  "build": "20260813-permission-ui-r10",
+  "static": {
+    "js_syntax_failures": [],
+    "missing_local_assets": [],
+    "permission_used_but_not_registered": [],
+    "resize_listeners": 1,
+    "mutation_observer": 0,
+    "console_log_debug": 0,
+    "create_root_calls": 1,
+    "bf_mount_assignments": 1,
+    "dashboard_renderer_assignments": 1,
+    "old_menu_class_references": 0,
+    "build_versions": [
+      "20260813-permission-ui-r10"
+    ]
+  },
+  "browser_harness": {
+    "owner_menu": [
+      "Dashboard",
+      "Barang Masuk",
+      "Barang Keluar",
+      "Tally",
+      "Pengeluaran",
+      "Setoran",
+      "Komisi",
+      "Sembako",
+      "Produk",
+      "Supplier",
+      "Customer",
+      "Histori",
+      "Laporan",
+      "Export",
+      "Staff",
+      "Pengguna",
+      "Hak Akses",
+      "Izin Histori",
+      "Log Aktivitas",
+      "Pengaturan",
+      "Backup",
+      "Data Terhapus"
+    ],
+    "admin_menu": [
+      "Dashboard",
+      "Barang Masuk",
+      "Barang Keluar",
+      "Tally",
+      "Pengeluaran",
+      "Setoran",
+      "Komisi",
+      "Sembako",
+      "Produk",
+      "Supplier",
+      "Customer",
+      "Histori",
+      "Laporan",
+      "Export",
+      "Staff"
+    ],
+    "operator_menu": [
+      "Dashboard",
+      "Barang Masuk",
+      "Barang Keluar",
+      "Tally",
+      "Produk",
+      "Supplier",
+      "Customer",
+      "Histori",
+      "Laporan",
+      "Staff"
+    ],
+    "dashboard_quick_actions": {
+      "owner": [
+        "Barang Masuk",
+        "Barang Keluar",
+        "Keuangan",
+        "Laporan"
+      ],
+      "admin": [
+        "Barang Masuk",
+        "Barang Keluar",
+        "Keuangan",
+        "Laporan"
+      ],
+      "operator": [
+        "Barang Masuk",
+        "Barang Keluar",
+        "Laporan"
+      ]
+    },
+    "admin_direct_open": {
+      "barang_masuk": "PASS",
+      "barang_keluar": "PASS",
+      "keuangan_pengeluaran": "PASS"
+    },
+    "operator_finance_restriction": "PASS",
+    "owner_menu_geometry": [
+      "320x568 mobile PASS",
+      "360x800 mobile PASS",
+      "390x844 mobile PASS",
+      "430x932 mobile PASS",
+      "667x375 landscape PASS",
+      "768x1024 tablet PASS",
+      "1024x768 tablet PASS",
+      "1366x768 desktop PASS",
+      "1440x900 desktop PASS"
+    ],
+    "owner_last_menu_item_accessible": [
+      "320x568 PASS",
+      "667x375 landscape PASS",
+      "1366x768 desktop PASS"
+    ],
+    "r9_regression": {
+      "legacy_outgoing_customer_marketing": "PASS",
+      "customer_search_name_contact": "PASS",
+      "finance_multi_photo_two_files": "PASS",
+      "finance_single_photo_compatibility": "PASS",
+      "owner_report_date_range_and_sections": "PASS"
+    }
+  },
+  "unchanged_from_r9": {
+    "cloud_sync": true,
+    "photo_storage": true,
+    "schema_migrations": true,
+    "adaptive_ui_controller": true,
+    "supabase_upgrade_sql": true
+  },
+  "not_live_tested": [
+    "Google OAuth login/logout against the user's production account",
+    "Production Supabase write/upload",
+    "Realtime between two physical authenticated devices",
+    "Full browser session using the user's real production data"
+  ]
+}

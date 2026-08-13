@@ -1,0 +1,31 @@
+BINTANG FROZEN V26 — R10 PERMISSION & UI INTEGRITY
+Build: 20260813-permission-ui-r10
+
+ROOT CAUSES FIXED
+1. Dashboard Quick Actions caller existed but required BFRenderDashboardEnhancements implementation was missing.
+2. Menu/feature code used permission names not present in Auth DEFAULTS, causing Admin transaction and finance menus to disappear.
+3. Desktop/tablet and mobile used two independent menu containers; desktop popup was centered relative to the menu button wrapper and could leave the viewport.
+4. Adaptive UI was not the sole resize owner because refresh-layout.js had another resize listener.
+
+ARCHITECTURE CHANGES
+- Added one canonical permission registry: assets/js/permission-registry.js.
+- Auth defaults and legacy React-session bridge now derive from that registry.
+- Owner permission editor renders all canonical permission keys.
+- Replaced dual desktop/mobile menu implementation with one bf-app-menu system.
+- Menu visual mode follows data-bf-ui-mode; physical narrow-screen media query is used only as a viewport safety constraint.
+- Dashboard Quick Actions and Owner dashboard summary are provided by the existing reporting engine.
+- Removed refresh-layout.js and its duplicate resize listener.
+- Removed owner-control's old menu injection path.
+
+DEFAULT ROLE INTENT
+Owner: owner bypass remains unchanged.
+Admin: operational transactions + finance + reports/master data; no Owner-only user/permission/audit/backup controls.
+Operator: operational transactions/tally + read-oriented master/report access; finance and Owner controls remain unavailable by default.
+Supabase bf_role_permissions rows can still override Admin/Operator defaults.
+
+SUPABASE / DATA
+No SQL, RLS, database schema, Storage bucket, Realtime, Store ID, Cloud Sync, or migration change.
+R9 data compatibility remains intact.
+
+TEST LIMIT
+Production Google OAuth, production writes, and real multi-device Realtime were not executed.
