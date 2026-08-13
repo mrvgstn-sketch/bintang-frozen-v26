@@ -1,0 +1,30 @@
+{
+  "build": "20260813-operations-owner-r9",
+  "syntax_failures": [],
+  "missing_local_assets": [],
+  "verified_browser_tests": {
+    "mobile_menu_viewports": [
+      "320x568 PASS",
+      "360x800 PASS",
+      "390x844 PASS",
+      "430x932 PASS",
+      "667x375 landscape PASS"
+    ],
+    "legacy_outgoing_record": "PASS: legacy top-level marketing inherited when editing old transaction",
+    "customer_search_source": "PASS: existing customer master renders searchable datalist with name + WA/contact labels",
+    "multi_customer_marketing": "PASS: two customer groups can retain different marketing values; commission calculated per group",
+    "finance_multi_photo": "PASS: two selected files produce two Storage URLs; bukti_fotos[] persisted and bukti_foto compatibility field preserved",
+    "owner_report": "PASS: renders date range controls and 8 detailed report sections with review section"
+  },
+  "static_invariants": {
+    "operations_global_txmarketing": 0,
+    "mutation_observer": 0,
+    "base64_ui_wording": 0,
+    "build_markers": 24
+  },
+  "not_executed": {
+    "real_google_login_logout": "Requires user's live authenticated Supabase/Google session",
+    "real_supabase_upload_realtime": "Component flow tested with Storage/Supabase mocks; live project write was not performed to avoid modifying user data",
+    "multi_device_realtime": "Requires two authenticated live devices/sessions"
+  }
+}
