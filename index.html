@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BINTANG FROZEN</title>
+  
+
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#0d1b3e">
+  <meta name="description" content="Bintang Frozen - aplikasi operasional, tally, laporan dan audit.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Bintang Frozen">
+  <link rel="icon" type="image/png" href="bintang-frozen-logo.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png">
+
+
+<script>document.documentElement.setAttribute("data-bf-auth-pending","1");document.documentElement.dataset.bfBuild="20260814-r13-integrity";</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+
+
+
+
+
+
+
+
+  <link rel="stylesheet" href="assets/css/app.css?v=20260814-r13-integrity">
+</head>
+<body data-bf-build="20260814-r13-integrity">
+
+  <div id="bf-startup-screen" aria-live="polite">
+    <div id="bf-startup-card">
+      <div id="bf-startup-spinner"></div>
+      <div style="font-size:18px;font-weight:900">BINTANG FROZEN</div>
+      <div id="bf-startup-message" style="margin-top:8px;font-size:12px;color:#dbe4f3">
+        Memuat aplikasi...
+      </div>
+    </div>
+  </div>
+
+  <div id="bf-app-statusbar" class="bf-app-statusbar" hidden aria-live="polite">
+    <div class="bf-status-main">
+      <span class="dot" aria-hidden="true"></span>
+      <b id="bf-sync-text">Sinkronisasi</b>
+      <span id="bf-sync-time">Terakhir sinkron —</span>
+      <span id="bf-period-badge" hidden></span>
+    </div>
+    <button id="bf-owner-bell" class="bf-owner-bell" title="Permintaan izin" aria-label="Permintaan izin" hidden>🔔<i></i></button>
+  </div>
+
+  <div id="bf-menu-host" aria-label="Menu aplikasi"></div>
+  <div id="bf-dashboard-extension-host" hidden></div>
+  <div id="root"></div>
+
+<script id="bf-pre-react-guard" src="assets/js/pre-react-guard.js?v=20260814-r13-integrity"></script>
+
+<script src="assets/js/core.js?v=20260814-r13-integrity"></script>
+<script src="assets/js/permission-registry.js?v=20260814-r13-integrity"></script>
+<script src="assets/js/data-model.js?v=20260814-r13-integrity"></script>
+<script src="assets/js/reporting-engine.js?v=20260814-r13-integrity"></script>
+<script src="assets/js/pdf-export.js?v=20260814-r13-integrity"></script>
+<script src="assets/js/schema-migrations.js?v=20260814-r13-integrity"></script>
+<script src="assets/js/adaptive-ui.js?v=20260814-r13-integrity"></script>
+<script type="module" src="assets/js/react-app.js?v=20260814-r13-integrity"></script>
+  <script src="assets/js/external-link-safety.js?v=20260814-r13-integrity"></script>
+  
+
+
+<div id="bfTallyOverlay" style="display:none">
+  <div id="bfTallyModal">
+    <div class="bfTally-head">
+      <div><div class="bfTally-title">TALLY SHEET</div><div class="bfTally-sub">Timbangan real per kolom • detail timbangan • siap cetak</div></div>
+      <div class="bfTally-actions">
+        <button class="bfTally-btn primary" id="bfTallyAddRow">＋ Baris</button>
+        <button class="bfTally-btn dark" id="bfTallyAddCol">＋ Kolom Real</button>
+        <button class="bfTally-btn" id="bfTallyPrint">🖨 Cetak</button>
+        <button class="bfTally-btn" id="bfTallyCsv">⇩ CSV</button>
+        <button class="bfTally-btn primary" id="bfTallyCombined">⇩ Export Gabungan CSV</button><button class="bfTally-btn dark" id="bfTallyCombinedPdf">📄 PDF Semua Laporan</button>
+        <button class="bfTally-btn" id="bfTallyJson">☁️ Backup Drive</button>
+        <button class="bfTally-btn danger" id="bfTallyClose">✕ Tutup</button>
+      </div>
+    </div>
+    <div class="bfTally-toolbar">
+      <select id="bfTallyMode" class="bfTally-select"><option value="keluar">BARANG KELUAR</option><option value="masuk">BARANG MASUK</option></select>
+      <input id="bfTallySearch" class="bfTally-input" placeholder="Cari customer / supplier / item..." style="min-width:240px">
+      <select id="bfTallyFilter" class="bfTally-select"><option value="all">Semua</option><option value="filled">Ada timbangan</option><option value="empty">Belum ditimbang</option></select>
+      <div class="bfTally-kpi">
+        <div class="bfTally-card"><b id="bfTallyRows">0</b><span>BARIS</span></div>
+        <div class="bfTally-card"><b id="bfTallyCount">0</b><span>TITIK TIMBANG</span></div>
+        <div class="bfTally-card"><b id="bfTallyTotal">0,00 kg</b><span>TOTAL REAL</span></div>
+        <div class="bfTally-card"><b id="bfTallyAvg">0,00 kg</b><span>RATA-RATA</span></div>
+      </div>
+      <span style="margin-left:auto;font-size:9px;color:#64748b">Klik setiap angka R1/R2/... untuk membuka DETAIL TIMBANGAN.</span>
+    </div>
+    <div class="bfTally-scroll"><table class="bfTally-table"><thead id="bfTallyThead"></thead><tbody id="bfTallyTbody"></tbody></table></div>
+  </div>
+</div>
+<div id="bfTallyDetail">
+  <div class="bfTally-detailbox">
+    <div class="bfTally-detailhead" id="bfTallyDetailTitle">Detail Timbangan</div>
+    <div class="bfTally-detailbody">
+      <div class="bfTally-field"><label>Berat Real (kg)</label><input id="bfTallyDWeight" inputmode="decimal"></div>
+      <div class="bfTally-field"><label>Nomor Timbangan</label><input id="bfTallyDScale" placeholder="Timbangan 1"></div>
+      <div class="bfTally-field"><label>Operator</label><input id="bfTallyDOperator" placeholder="Nama petugas"></div>
+      <div class="bfTally-field"><label>Waktu Timbang</label><input id="bfTallyDTime" type="datetime-local"></div>
+      <div class="bfTally-field"><label>Gross (kg)</label><input id="bfTallyDGross" inputmode="decimal"></div>
+      <div class="bfTally-field"><label>Tare (kg)</label><input id="bfTallyDTare" inputmode="decimal"></div>
+      <div class="bfTally-field full"><label>Keterangan / Kondisi / Selisih</label><textarea id="bfTallyDNote" rows="3" placeholder="Contoh: kemasan basah, timbang ulang, selisih dengan surat jalan..."></textarea></div>
+    </div>
+    <div class="bfTally-foot"><button class="bfTally-btn" id="bfTallyCancelDetail">Batal</button><button class="bfTally-btn primary" id="bfTallySaveDetail">Simpan Detail</button></div>
+  </div>
+</div>
+<script src="assets/js/tally-pro.js?v=20260814-r13-integrity"></script>
+
+
+<script id="bf-supabase-resilient-loader" src="assets/js/supabase-loader.js?v=20260814-r13-integrity"></script>
+<script src="assets/js/photo-storage.js?v=20260814-r13-integrity"></script>
+<script src="assets/js/cloud-sync.js?v=20260814-r13-integrity"></script>
+
+  <script src="assets/js/auth.js?v=20260814-r13-integrity"></script>
+<script id="bf-v26-professional-enhancements" src="assets/js/professional-enhancements.js?v=20260814-r13-integrity"></script>
+
+<script id="bf-final-menu-native-v26" src="assets/js/menu.js?v=20260814-r13-integrity"></script>
+
+
+<script id="bf-v26-governance-layer" src="assets/js/governance.js?v=20260814-r13-integrity"></script>
+
+
+
+
+
+
+
+<script id="bf-v26-operations-center" src="assets/js/operations.js?v=20260814-r13-integrity"></script>
+
+
+
+<script id="bf-v26-inline-tally-controller" src="assets/js/inline-tally.js?v=20260814-r13-integrity"></script>
+
+
+
+<script id="bf-v26-owner-control" src="assets/js/owner-control.js?v=20260814-r13-integrity"></script>
+
+
+
+<script id="bf-v26-finance-commission" src="assets/js/finance-commission.js?v=20260814-r13-integrity"></script>
+<script id="bf-v26-reporting" src="assets/js/reporting.js?v=20260814-r13-integrity"></script>
+
+
+
+
+
+
+
+
+
+
+<script id="bf-v26-finance-master-crud" src="assets/js/finance-master.js?v=20260814-r13-integrity"></script>
+<script id="bf-drive-backup" src="assets/js/drive-backup.js?v=20260814-r13-integrity"></script>
+<script id="bf-v26-refresh-safe-bootstrap" src="assets/js/refresh-layout.js?v=20260814-r13-integrity"></script>
+
+
+
+
+
+
+
+<script id="bf-disable-legacy-pwa-cache" src="assets/js/pwa-cleanup.js?v=20260814-r13-integrity"></script>
+</body>
+</html>
