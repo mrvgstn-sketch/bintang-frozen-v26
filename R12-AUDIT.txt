@@ -1,0 +1,39 @@
+BINTANG FROZEN V26 — R12 STABLE DETAIL
+Build: 20260814-r12-stable-detail
+
+BASELINE
+Only the user-supplied R9 Operations & Owner Audit ZIP was used as the code baseline.
+
+MAIN CORRECTIONS
+- One canonical permission registry for menu and Dashboard Quick Actions.
+- One viewport-safe menu system; old split desktop/mobile menu system removed from active code.
+- Dashboard Quick Actions restored for Barang Masuk, Barang Keluar, Keuangan (when permitted), and Laporan Detail.
+- Customer marketing semantics fixed:
+  property exists with marketing:"" = explicit Tanpa Marketing and stays empty;
+  missing marketing property = legacy top-level fallback may be used.
+- Marketing stays isolated per customers[n].
+- Laporan Detail retained for Barang Masuk, Barang Keluar, Setoran, Pengeluaran, Sembako, Komisi.
+- PDF uses the same canonical reporting engine as on-screen reports.
+- PDF layout uses grouped Transaction → Customer/Supplier → Item → Tally sections with readable spacing and page numbering.
+- Google Identity Services + Drive REST API is the canonical backup path.
+- No Client Secret is embedded.
+- Backup manifest/checksum/attachment restore flow is present.
+
+SUPABASE / STARTUP
+No change to Supabase Auth, RLS, schema, Realtime, Storage bucket, Store ID, or Cloud Sync lifecycle.
+
+FINAL GATES
+JS syntax errors: 0
+Missing local assets: 0
+Used permissions not in registry: 0
+MutationObserver: 0
+Resize listeners: 1
+React createRoot: 1
+Old menu refs: 0
+Legacy window.jspdf refs: 0
+OAuth client_secret refs: 0
+Build versions: 20260814-r12-stable-detail
+
+LIVE TEST LIMIT
+Google OAuth, real Drive backup/restore, production destructive restore,
+and real two-device Realtime were not executed from this environment.
