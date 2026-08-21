@@ -25,6 +25,9 @@ jobs:
           node --check assets/js/nota-dana-titipan.js
           node --check assets/js/nota-dana-titipan-controls.js
           node --check assets/js/nota-dana-titipan-signature-hardening.js
+          node --check tests/r13-setoran-single-writer.js
+      - name: Setoran single-writer logic
+        run: node tests/r13-setoran-single-writer.js
       - name: Architecture guards
         run: |
           ! grep -E "bf_keluar_v26|bf_masuk_v26|inventory_movements|bf_state_items" assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js
@@ -46,7 +49,7 @@ jobs:
           grep -q "loadCanonicalSetoran" assets/js/menu.js
           ! grep -q "'finance-deposit':'BFOpenFinanceDeposit'" assets/js/menu.js
       - name: Source snapshot SHA-256
-        run: sha256sum assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js supabase/migrations/20260822_r13_nota_dana_titipan*.sql tests/r13-nota-dana-titipan*.sql
+        run: sha256sum assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js supabase/migrations/20260822_r13_nota_dana_titipan*.sql tests/r13-nota-dana-titipan*.sql tests/r13-setoran-single-writer.js
 
   postgres-integration:
     name: PostgreSQL integration harness
