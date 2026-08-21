@@ -23,8 +23,11 @@ function loadScriptOnce(src,key,readyFn){
   window[key]=new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.async=true;s.onload=()=>{if(typeof window[readyFn]==='function'){window[readyFn]();resolve(true)}else reject(new Error('Modul gagal diinisialisasi.'))};s.onerror=()=>reject(new Error('Modul gagal dimuat.'));document.head.appendChild(s)}).finally(()=>{window[key]=null});
   return window[key];
 }
-function loadNotaDanaTitipan(){return loadScriptOnce('assets/js/nota-dana-titipan.js?v=20260822-uat1','__bfNotaDanaTitipanLoading','BFOpenNotaDanaTitipan')}
-function loadNotaDanaControls(){return loadScriptOnce('assets/js/nota-dana-titipan-controls.js?v=20260822-uat1','__bfNotaDanaControlsLoading','BFOpenNotaDanaTitipanControls')}
+async function loadNotaDanaTitipan(){
+  await loadScriptOnce('assets/js/nota-dana-titipan-signature-hardening.js?v=20260822-uat2','__bfNotaSignatureLoading','BFNotaSignatureStrokeCount');
+  return loadScriptOnce('assets/js/nota-dana-titipan.js?v=20260822-uat2','__bfNotaDanaTitipanLoading','BFOpenNotaDanaTitipan');
+}
+function loadNotaDanaControls(){return loadScriptOnce('assets/js/nota-dana-titipan-controls.js?v=20260822-uat2','__bfNotaDanaControlsLoading','BFOpenNotaDanaTitipanControls')}
 function bind(wrap){
   if(!wrap || wrap.id!=="bf-app-menu-anchor")return false;activeWrap=wrap;if(wrap.dataset.bfMenuBound==="1")return true;
   const btn=wrap.querySelector('.bf-app-menu-btn'),pop=wrap.querySelector('.bf-app-menu-pop');if(!btn||!pop)return false;wrap.dataset.bfMenuBound="1";
