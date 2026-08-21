@@ -115,13 +115,13 @@ jobs:
             echo "Retirement unexpectedly accepted non-empty legacy data" >&2
             exit 1
           fi
-          psql -h localhost -U postgres -d postgres -c "select case when count(*)=1 then 1 else 1/0 end from public.bf_customer_fund_cases;"
+          psql -At -h localhost -U postgres -d postgres -c "select count(*) from public.bf_customer_fund_cases;" | grep -qx '1'
           psql -h localhost -U postgres -d postgres -c "truncate public.bf_customer_fund_cases;"
       - name: Retire empty legacy fixture
         run: |
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220001_r13_legacy_cfc_retirement.sql
-          psql -h localhost -U postgres -d postgres -c "select case when to_regclass('public.bf_customer_fund_cases') is null and to_regclass('public.bf_entrusted_notes') is null then 1 else 1/0 end as retirement_ok;"
-          psql -h localhost -U postgres -d postgres -c "select case when not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'bf_cfc_%') then 1 else 1/0 end as legacy_rpc_removed;"
+          psql -At -h localhost -U postgres -d postgres -c "select to_regclass('public.bf_customer_fund_cases') is null and to_regclass('public.bf_entrusted_notes') is null;" | grep -qx 't'
+          psql -At -h localhost -U postgres -d postgres -c "select not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'bf_cfc_%');" | grep -qx 't'
       - name: Run core functional and permission tests
         working-directory: tests
         run: |
