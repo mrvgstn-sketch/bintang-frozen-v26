@@ -67,15 +67,15 @@ begin
  return r;
 end $$;
 
--- RLS policies must not depend on client EXECUTE permission for internal security helpers.
+-- RLS uses one narrow boolean helper. The client never gets direct bf_profiles SELECT just for this feature.
 do $$ declare t text; begin
  foreach t in array array['bf_entrusted_notes','bf_entrusted_note_items','bf_entrusted_transfers','bf_entrusted_corrections','bf_entrusted_payouts','bf_cash_movements','bf_cash_reconciliations','bf_entrusted_events'] loop
   execute format('drop policy if exists nt_read_admin_owner on public.%I',t);
-  execute format($p$create policy nt_read_admin_owner on public.%I for select to authenticated using (exists (select 1 from public.bf_profiles p where p.id=auth.uid() and p.active=true and lower(p.role) in ('owner','admin')))$p$,t);
+  execute format('create policy nt_read_admin_owner on public.%I for select to authenticated using (public.bf_nt_is_admin_or_owner())',t);
  end loop;
 end $$;
 
--- Revoke the default PUBLIC execute privilege from every internal/public bf_nt_* function.
+-- Revoke default execute privilege from every helper/RPC, then expose only the minimum surface.
 do $$
 declare r record;begin
  for r in
@@ -89,7 +89,10 @@ declare r record;begin
  end loop;
 end $$;
 
--- Only these guarded RPCs are callable from the authenticated client.
+-- This single boolean helper is required by RLS policies and reveals no profile rows.
+grant execute on function public.bf_nt_is_admin_or_owner() to authenticated;
+
+-- Only these guarded mutation RPCs are callable from the authenticated client.
 grant execute on function public.bf_nt_create_note(text,text,text,numeric,text,jsonb,jsonb,text) to authenticated;
 grant execute on function public.bf_nt_update_draft(uuid,text,text,text,numeric,text,jsonb,jsonb,text) to authenticated;
 grant execute on function public.bf_nt_submit_note(uuid) to authenticated;
