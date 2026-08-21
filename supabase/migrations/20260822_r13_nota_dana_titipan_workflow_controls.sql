@@ -6,7 +6,7 @@ alter table public.bf_entrusted_corrections
   add column if not exists old_snapshot jsonb;
 
 -- Approved corrections are applied to canonical note/items by Owner.
--- Therefore financials must read current canonical values and must not re-add correction deltas.
+-- Preserve all existing view column names/order; append payout_excess at the end.
 create or replace view public.bf_entrusted_note_financials
 with (security_invoker=true) as
 with tr as (
@@ -34,9 +34,9 @@ select n.id note_id,n.note_no,n.customer_id,n.customer_name_snapshot,n.buyer_nam
  coalesce(pay.payout_committed,0)::numeric(18,2) payout_committed,
  coalesce(pay.payout_verified,0)::numeric(18,2) payout_verified,
  greatest(greatest(coalesce(t.actual_confirmed,0)-b.base_bf_right,0)-coalesce(pay.payout_committed,0),0)::numeric(18,2) payout_outstanding,
- greatest(coalesce(pay.payout_committed,0)-greatest(coalesce(t.actual_confirmed,0)-b.base_bf_right,0),0)::numeric(18,2) payout_excess,
  greatest(coalesce(t.gross_confirmed,0)-b.base_note_total,0)::numeric(18,2) overpayment,
- (coalesce(t.gross_confirmed,0)>=b.base_note_total) as is_paid
+ (coalesce(t.gross_confirmed,0)>=b.base_note_total) as is_paid,
+ greatest(coalesce(pay.payout_committed,0)-greatest(coalesce(t.actual_confirmed,0)-b.base_bf_right,0),0)::numeric(18,2) payout_excess
 from public.bf_entrusted_notes n
 join public.bf_entrusted_note_base_financials b on b.note_id=n.id
 left join tr t on t.note_id=n.id
