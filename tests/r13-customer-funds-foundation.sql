@@ -39,20 +39,10 @@ select public.cf_assert((select unclassified_excess=100000 from public.bf_custom
 
 -- The same Rp6.500 fee cannot be allocated again to the remaining excess.
 reset role;set role authenticated;select set_config('request.jwt.claim.sub','22222222-2222-2222-2222-222222222222',false);
-do $$begin
- begin
-   perform public.bf_cf_propose_classification(current_setting('cf.case_id',true)::uuid,'CUSTOMER_DEPOSIT',100000,6500,'Simpan deposit','cf-class-dupfee');
-   raise exception 'expected CF_BANK_FEE_DOUBLE_ALLOCATION';
- exception when others then
-   if position('CF_BANK_FEE_DOUBLE_ALLOCATION' in sqlerrm)=0 then raise;end if;
- end;
-end$$;
-
--- Since DO cannot see psql variables, set the case id and retry the exact negative scenario.
 select set_config('cf.case_id',:'case_id',false);
 do $$begin
  begin
-   perform public.bf_cf_propose_classification(current_setting('cf.case_id')::uuid,'CUSTOMER_DEPOSIT',100000,6500,'Simpan deposit','cf-class-dupfee-2');
+   perform public.bf_cf_propose_classification(current_setting('cf.case_id')::uuid,'CUSTOMER_DEPOSIT',100000,6500,'Simpan deposit','cf-class-dupfee');
    raise exception 'expected CF_BANK_FEE_DOUBLE_ALLOCATION';
  exception when others then
    if position('CF_BANK_FEE_DOUBLE_ALLOCATION' in sqlerrm)=0 then raise;end if;
