@@ -1,0 +1,76 @@
+name: R13 Customer Funds Safety
+
+on:
+  push:
+    branches:
+      - r13/customer-funds-control-20260822
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-js:
+    name: Static JS safety harness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run static harness
+        run: node tests/r13-customer-funds-static.test.js
+
+  postgres-integration:
+    name: PostgreSQL integration harness
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: r13_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d r13_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: r13_test
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Bootstrap Supabase-compatible auth fixture
+        run: psql -v ON_ERROR_STOP=1 -f tests/r13-customer-funds-bootstrap.sql
+      - name: Apply Customer Funds migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260822_r13_customer_funds_control.sql
+      - name: Apply hardening migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260822_r13_customer_funds_hardening.sql
+      - name: Run functional, permission and reversal tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/r13-customer-funds-postgres.test.sql
+      - name: Assert authenticated users cannot direct-write Customer Funds tables
+        shell: bash
+        run: |
+          set +e
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          set role authenticated;
+          select set_config('request.jwt.claim.sub','22222222-2222-2222-2222-222222222222',false);
+          insert into public.bf_customer_fund_cases(case_no,customer_name_snapshot,created_by)
+          values('ILLEGAL-DIRECT-WRITE','Must Fail','22222222-2222-2222-2222-222222222222');
+          SQL
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            echo "FAIL: direct write unexpectedly succeeded"
+            exit 1
+          fi
+          echo "PASS: direct write denied"
