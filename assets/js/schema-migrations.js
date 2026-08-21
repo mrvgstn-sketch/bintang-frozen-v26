@@ -71,5 +71,33 @@ function run(){
   window.BFCore.storage.setRaw(VERSION_KEY,String(CURRENT_VERSION));
   return {from:start,to:CURRENT_VERSION,changedKeys:[...new Set(changed)]};
 }
+
+// R13 Customer Funds safety gate: bf_note_setoran_v26 has exactly one durable UI writer.
+// Legacy React may still read the array for backward compatibility, but a changed value
+// cannot be persisted unless it passes through BFSetoranStore below. Cloud apply uses
+// BFCore.storage.setRaw and therefore remains able to hydrate canonical remote state.
+const SETORAN_KEY="bf_note_setoran_v26";
+let setoranWriteDepth=0;
+window.BFCore.storage.beforeSet(({key,value})=>{
+  if(String(key)!==SETORAN_KEY||setoranWriteDepth>0)return;
+  const current=localStorage.getItem(SETORAN_KEY);
+  if(current===String(value))return;
+  console.error("[Bintang Frozen] BLOCKED non-canonical Setoran writer");
+  window.dispatchEvent(new CustomEvent("bf:setoran-writer-blocked",{detail:{key:SETORAN_KEY}}));
+  return {value:current===null?"[]":current};
+});
+function setoranWrite(items){
+  if(!Array.isArray(items))throw new Error("SETORAN_INVALID_DATASET");
+  setoranWriteDepth++;
+  try{window.BFCore.storage.set(SETORAN_KEY,items)}finally{setoranWriteDepth--}
+  return true;
+}
+window.BFSetoranStore={
+  key:SETORAN_KEY,
+  list:()=>window.BFCore.storage.list(SETORAN_KEY),
+  write:setoranWrite,
+  isCanonicalWriter:true
+};
+
 window.BFSchema={CURRENT_VERSION,LEGACY_ALIASES,run};
 })();
