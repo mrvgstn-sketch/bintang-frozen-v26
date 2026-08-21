@@ -111,7 +111,7 @@ jobs:
           SQL
       - name: Legacy retirement refuses non-empty schema
         run: |
-          if psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220001_r13_legacy_cfc_retirement.sql; then
+          if psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220001_r13_legacy_cfc_retirement.sql; then
             echo "Retirement unexpectedly accepted non-empty legacy data" >&2
             exit 1
           fi
@@ -119,35 +119,37 @@ jobs:
           psql -h localhost -U postgres -d postgres -c "truncate public.bf_customer_fund_cases;"
       - name: Retire empty legacy fixture
         run: |
-          psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220001_r13_legacy_cfc_retirement.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220001_r13_legacy_cfc_retirement.sql
           psql -h localhost -U postgres -d postgres -c "select case when to_regclass('public.bf_customer_fund_cases') is null and to_regclass('public.bf_entrusted_notes') is null then 1 else 1/0 end as retirement_ok;"
           psql -h localhost -U postgres -d postgres -c "select case when not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'bf_cfc_%') then 1 else 1/0 end as legacy_rpc_removed;"
       - name: Run core functional and permission tests
         working-directory: tests
-        run: psql -h localhost -U postgres -d postgres -f r13-nota-dana-titipan.sql
+        run: |
+          sed -i 's#20260822_r13_nota_dana_titipan.sql#202608220010_r13_nota_dana_titipan.sql#;s#20260822_r13_nota_dana_titipan_hardening.sql#202608220020_r13_nota_dana_titipan_hardening.sql#' r13-nota-dana-titipan.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f r13-nota-dana-titipan.sql
       - name: Apply workflow control and signature migrations
         run: |
-          psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220030_r13_nota_dana_titipan_workflow_controls.sql
-          psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220040_r13_nota_dana_titipan_cash_hardening.sql
-          psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220050_r13_nota_dana_titipan_signature_hardening.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220030_r13_nota_dana_titipan_workflow_controls.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220040_r13_nota_dana_titipan_cash_hardening.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220050_r13_nota_dana_titipan_signature_hardening.sql
       - name: Run mandatory signature tests
         working-directory: tests
-        run: psql -h localhost -U postgres -d postgres -f r13-nota-dana-titipan-signature.sql
+        run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f r13-nota-dana-titipan-signature.sql
       - name: Run correction, reversal and stale-cash tests
         working-directory: tests
-        run: psql -h localhost -U postgres -d postgres -f r13-nota-dana-titipan-workflow.sql
+        run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f r13-nota-dana-titipan-workflow.sql
       - name: Apply Customer Funds foundation
-        run: psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220060_r13_customer_funds_foundation.sql
+        run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220060_r13_customer_funds_foundation.sql
       - name: Run Customer Funds foundation tests
         working-directory: tests
-        run: psql -h localhost -U postgres -d postgres -f r13-customer-funds-foundation.sql
+        run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f r13-customer-funds-foundation.sql
       - name: Apply Customer Funds lifecycle
-        run: psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220070_r13_customer_funds_lifecycle.sql
+        run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220070_r13_customer_funds_lifecycle.sql
       - name: Run Customer Funds lifecycle tests
         working-directory: tests
-        run: psql -h localhost -U postgres -d postgres -f r13-customer-funds-lifecycle.sql
+        run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f r13-customer-funds-lifecycle.sql
       - name: Migration replay idempotency
         run: |
-          psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220060_r13_customer_funds_foundation.sql
-          psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220070_r13_customer_funds_lifecycle.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220060_r13_customer_funds_foundation.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220070_r13_customer_funds_lifecycle.sql
           psql -h localhost -U postgres -d postgres -c "select count(*)>=1 as replay_ok from public.bf_customer_fund_cases;"
