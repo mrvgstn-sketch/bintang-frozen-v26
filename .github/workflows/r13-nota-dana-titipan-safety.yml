@@ -20,6 +20,8 @@ jobs:
       - name: Syntax checks
         run: |
           node --check assets/js/menu.js
+          node --check assets/js/schema-migrations.js
+          node --check assets/js/setoran-canonical.js
           node --check assets/js/nota-dana-titipan.js
           node --check assets/js/nota-dana-titipan-controls.js
           node --check assets/js/nota-dana-titipan-signature-hardening.js
@@ -37,8 +39,14 @@ jobs:
           grep -q "CORRECTION_REQUIRED" supabase/migrations/20260822_r13_nota_dana_titipan_cash_hardening.sql
           grep -q "p_signature_strokes:strokeCount" assets/js/nota-dana-titipan-signature-hardening.js
           grep -q "NT_SIGNATURE_STROKES_REQUIRED" supabase/migrations/20260822_r13_nota_dana_titipan_signature_hardening.sql
+          grep -q "BLOCKED non-canonical Setoran writer" assets/js/schema-migrations.js
+          grep -q "window.BFSetoranStore" assets/js/schema-migrations.js
+          grep -q "Customer ID stabil" assets/js/setoran-canonical.js
+          grep -q "GAGAL / BELUM TERSINKRON" assets/js/setoran-canonical.js
+          grep -q "loadCanonicalSetoran" assets/js/menu.js
+          ! grep -q "'finance-deposit':'BFOpenFinanceDeposit'" assets/js/menu.js
       - name: Source snapshot SHA-256
-        run: sha256sum assets/js/menu.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js supabase/migrations/20260822_r13_nota_dana_titipan*.sql tests/r13-nota-dana-titipan*.sql
+        run: sha256sum assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js supabase/migrations/20260822_r13_nota_dana_titipan*.sql tests/r13-nota-dana-titipan*.sql
 
   postgres-integration:
     name: PostgreSQL integration harness
