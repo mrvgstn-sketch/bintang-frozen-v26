@@ -30,8 +30,11 @@ jobs:
           grep -q "NT_PURE_ENTRUSTED_FEE_REQUIRED" supabase/migrations/20260822_r13_nota_dana_titipan.sql
           grep -q "NT_NOTE_NOT_PAID" supabase/migrations/20260822_r13_nota_dana_titipan_hardening.sql
           grep -q "NT_SELF_VERIFY_DENIED" supabase/migrations/20260822_r13_nota_dana_titipan.sql
+          grep -q "payout_excess" supabase/migrations/20260822_r13_nota_dana_titipan_workflow_controls.sql
+          grep -q "NT_REVERSE_PAYOUTS_FIRST" supabase/migrations/20260822_r13_nota_dana_titipan_workflow_controls.sql
+          grep -q "CORRECTION_REQUIRED" supabase/migrations/20260822_r13_nota_dana_titipan_cash_hardening.sql
       - name: Source snapshot SHA-256
-        run: sha256sum assets/js/menu.js assets/js/nota-dana-titipan.js supabase/migrations/20260822_r13_nota_dana_titipan.sql supabase/migrations/20260822_r13_nota_dana_titipan_hardening.sql tests/r13-nota-dana-titipan.sql
+        run: sha256sum assets/js/menu.js assets/js/nota-dana-titipan.js supabase/migrations/20260822_r13_nota_dana_titipan*.sql tests/r13-nota-dana-titipan*.sql
 
   postgres-integration:
     name: PostgreSQL integration harness
@@ -56,6 +59,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install PostgreSQL client
         run: sudo apt-get update -qq && sudo apt-get install -y postgresql-client
-      - name: Run functional, permission, idempotency and cash reconciliation tests
+      - name: Run core functional and permission tests
         working-directory: tests
         run: psql -h localhost -U postgres -d postgres -f r13-nota-dana-titipan.sql
+      - name: Apply workflow control migrations
+        run: |
+          psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_nota_dana_titipan_workflow_controls.sql
+          psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_nota_dana_titipan_cash_hardening.sql
+      - name: Run correction, reversal and stale-cash tests
+        working-directory: tests
+        run: psql -h localhost -U postgres -d postgres -f r13-nota-dana-titipan-workflow.sql
