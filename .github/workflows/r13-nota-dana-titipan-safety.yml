@@ -48,8 +48,12 @@ jobs:
           grep -q "GAGAL / BELUM TERSINKRON" assets/js/setoran-canonical.js
           grep -q "loadCanonicalSetoran" assets/js/menu.js
           ! grep -q "'finance-deposit':'BFOpenFinanceDeposit'" assets/js/menu.js
+          grep -q "bf_note_setoran_v26 remains the one canonical incoming-money writer" supabase/migrations/20260822_r13_customer_funds_foundation.sql
+          grep -q "CUSTOMER_COMMISSION" supabase/migrations/20260822_r13_customer_funds_foundation.sql
+          grep -q "CUSTOMER_DEPOSIT" supabase/migrations/20260822_r13_customer_funds_foundation.sql
+          grep -q "WRONG_TRANSFER_REFUND" supabase/migrations/20260822_r13_customer_funds_foundation.sql
       - name: Source snapshot SHA-256
-        run: sha256sum assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js supabase/migrations/20260822_r13_nota_dana_titipan*.sql tests/r13-nota-dana-titipan*.sql tests/r13-setoran-single-writer.js
+        run: sha256sum assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js supabase/migrations/20260822_r13_nota_dana_titipan*.sql supabase/migrations/20260822_r13_customer_funds_foundation.sql tests/r13-nota-dana-titipan*.sql tests/r13-customer-funds-foundation.sql tests/r13-setoran-single-writer.js
 
   postgres-integration:
     name: PostgreSQL integration harness
@@ -88,3 +92,8 @@ jobs:
       - name: Run correction, reversal and stale-cash tests
         working-directory: tests
         run: psql -h localhost -U postgres -d postgres -f r13-nota-dana-titipan-workflow.sql
+      - name: Apply Customer Funds foundation
+        run: psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_customer_funds_foundation.sql
+      - name: Run Customer Funds foundation tests
+        working-directory: tests
+        run: psql -h localhost -U postgres -d postgres -f r13-customer-funds-foundation.sql
