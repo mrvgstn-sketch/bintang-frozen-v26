@@ -67,6 +67,14 @@ begin
  return r;
 end $$;
 
+-- RLS policies must not depend on client EXECUTE permission for internal security helpers.
+do $$ declare t text; begin
+ foreach t in array array['bf_entrusted_notes','bf_entrusted_note_items','bf_entrusted_transfers','bf_entrusted_corrections','bf_entrusted_payouts','bf_cash_movements','bf_cash_reconciliations','bf_entrusted_events'] loop
+  execute format('drop policy if exists nt_read_admin_owner on public.%I',t);
+  execute format($p$create policy nt_read_admin_owner on public.%I for select to authenticated using (exists (select 1 from public.bf_profiles p where p.id=auth.uid() and p.active=true and lower(p.role) in ('owner','admin')))$p$,t);
+ end loop;
+end $$;
+
 -- Revoke the default PUBLIC execute privilege from every internal/public bf_nt_* function.
 do $$
 declare r record;begin
