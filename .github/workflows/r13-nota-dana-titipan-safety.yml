@@ -32,19 +32,19 @@ jobs:
       - name: Architecture guards
         run: |
           ! grep -E "bf_keluar_v26|bf_masuk_v26|inventory_movements|bf_state_items" assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js assets/js/customer-funds.js
-          ! grep -E "insert into public\.(bf_keluar|bf_masuk|bf_state_items)" supabase/migrations/20260822_r13_nota_dana_titipan*.sql supabase/migrations/20260822_r13_customer_funds_*.sql
+          ! grep -E "insert into public\.(bf_keluar|bf_masuk|bf_state_items)" supabase/migrations/2026082200*_r13_nota_dana_titipan*.sql supabase/migrations/2026082200*_r13_customer_funds_*.sql
           ! grep -E "\.(insert|update|delete)\(" assets/js/customer-funds.js
-          grep -q "R13_LEGACY_CFC_NOT_EMPTY" supabase/migrations/20260822_r13_legacy_cfc_retirement.sql
-          grep -q "Kasir Pintar remains the canonical sales/POS writer" supabase/migrations/20260822_r13_nota_dana_titipan.sql
-          grep -q "security_invoker=true" supabase/migrations/20260822_r13_nota_dana_titipan_hardening.sql
-          grep -q "NT_PURE_ENTRUSTED_FEE_REQUIRED" supabase/migrations/20260822_r13_nota_dana_titipan.sql
-          grep -q "NT_NOTE_NOT_PAID" supabase/migrations/20260822_r13_nota_dana_titipan_hardening.sql
-          grep -q "NT_SELF_VERIFY_DENIED" supabase/migrations/20260822_r13_nota_dana_titipan.sql
-          grep -q "payout_excess" supabase/migrations/20260822_r13_nota_dana_titipan_workflow_controls.sql
-          grep -q "NT_REVERSE_PAYOUTS_FIRST" supabase/migrations/20260822_r13_nota_dana_titipan_workflow_controls.sql
-          grep -q "CORRECTION_REQUIRED" supabase/migrations/20260822_r13_nota_dana_titipan_cash_hardening.sql
+          grep -q "R13_LEGACY_CFC_NOT_EMPTY" supabase/migrations/202608220001_r13_legacy_cfc_retirement.sql
+          grep -q "Kasir Pintar remains the canonical sales/POS writer" supabase/migrations/202608220010_r13_nota_dana_titipan.sql
+          grep -q "security_invoker=true" supabase/migrations/202608220020_r13_nota_dana_titipan_hardening.sql
+          grep -q "NT_PURE_ENTRUSTED_FEE_REQUIRED" supabase/migrations/202608220010_r13_nota_dana_titipan.sql
+          grep -q "NT_NOTE_NOT_PAID" supabase/migrations/202608220020_r13_nota_dana_titipan_hardening.sql
+          grep -q "NT_SELF_VERIFY_DENIED" supabase/migrations/202608220010_r13_nota_dana_titipan.sql
+          grep -q "payout_excess" supabase/migrations/202608220030_r13_nota_dana_titipan_workflow_controls.sql
+          grep -q "NT_REVERSE_PAYOUTS_FIRST" supabase/migrations/202608220030_r13_nota_dana_titipan_workflow_controls.sql
+          grep -q "CORRECTION_REQUIRED" supabase/migrations/202608220040_r13_nota_dana_titipan_cash_hardening.sql
           grep -q "p_signature_strokes:strokeCount" assets/js/nota-dana-titipan-signature-hardening.js
-          grep -q "NT_SIGNATURE_STROKES_REQUIRED" supabase/migrations/20260822_r13_nota_dana_titipan_signature_hardening.sql
+          grep -q "NT_SIGNATURE_STROKES_REQUIRED" supabase/migrations/202608220050_r13_nota_dana_titipan_signature_hardening.sql
           grep -q "BLOCKED non-canonical Setoran writer" assets/js/schema-migrations.js
           grep -q "window.BFSetoranStore" assets/js/schema-migrations.js
           grep -q "Customer ID stabil" assets/js/setoran-canonical.js
@@ -55,20 +55,23 @@ jobs:
           grep -q "loadCustomerFunds" assets/js/menu.js
           grep -q "Dana Customer" assets/js/menu.js
           ! grep -q "'finance-deposit':'BFOpenFinanceDeposit'" assets/js/menu.js
-          grep -q "bf_note_setoran_v26 remains the one canonical incoming-money writer" supabase/migrations/20260822_r13_customer_funds_foundation.sql
-          grep -q "CUSTOMER_COMMISSION" supabase/migrations/20260822_r13_customer_funds_foundation.sql
-          grep -q "CUSTOMER_DEPOSIT" supabase/migrations/20260822_r13_customer_funds_foundation.sql
-          grep -q "WRONG_TRANSFER_REFUND" supabase/migrations/20260822_r13_customer_funds_foundation.sql
+          grep -q "bf_note_setoran_v26 remains the one canonical incoming-money writer" supabase/migrations/202608220060_r13_customer_funds_foundation.sql
+          grep -q "CUSTOMER_COMMISSION" supabase/migrations/202608220060_r13_customer_funds_foundation.sql
+          grep -q "CUSTOMER_DEPOSIT" supabase/migrations/202608220060_r13_customer_funds_foundation.sql
+          grep -q "WRONG_TRANSFER_REFUND" supabase/migrations/202608220060_r13_customer_funds_foundation.sql
           grep -q "pending payout" tests/r13-customer-funds-lifecycle.sql
-          grep -q "bf_cf_reconcile_cash_day" supabase/migrations/20260822_r13_customer_funds_lifecycle.sql
-          grep -q "bf_customer_sales_settlements" supabase/migrations/20260822_r13_customer_funds_lifecycle.sql
-          grep -q "CUSTOMER_DEPOSIT_REFUND" supabase/migrations/20260822_r13_customer_funds_lifecycle.sql
+          grep -q "bf_cf_reconcile_cash_day" supabase/migrations/202608220070_r13_customer_funds_lifecycle.sql
+          grep -q "bf_customer_sales_settlements" supabase/migrations/202608220070_r13_customer_funds_lifecycle.sql
+          grep -q "CUSTOMER_DEPOSIT_REFUND" supabase/migrations/202608220070_r13_customer_funds_lifecycle.sql
           grep -q "bf_cf_create_payout" assets/js/customer-funds.js
           grep -q "bf_cf_propose_deposit_use" assets/js/customer-funds.js
           grep -q "bf_cf_reverse_payout" assets/js/customer-funds.js
           grep -q "Tanda Tangan Penerima — wajib" assets/js/customer-funds.js
+      - name: Migration filenames are strictly ordered
+        run: |
+          test "$(find supabase/migrations -maxdepth 1 -type f -name '2026082200*_r13_*.sql' -printf '%f\n' | sort | tr '\n' ' ')" = "202608220001_r13_legacy_cfc_retirement.sql 202608220010_r13_nota_dana_titipan.sql 202608220020_r13_nota_dana_titipan_hardening.sql 202608220030_r13_nota_dana_titipan_workflow_controls.sql 202608220040_r13_nota_dana_titipan_cash_hardening.sql 202608220050_r13_nota_dana_titipan_signature_hardening.sql 202608220060_r13_customer_funds_foundation.sql 202608220070_r13_customer_funds_lifecycle.sql "
       - name: Source snapshot SHA-256
-        run: sha256sum assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical.js assets/js/customer-funds.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js supabase/migrations/20260822_r13_legacy_cfc_retirement.sql supabase/migrations/20260822_r13_nota_dana_titipan*.sql supabase/migrations/20260822_r13_customer_funds_*.sql tests/r13-nota-dana-titipan*.sql tests/r13-customer-funds-*.sql tests/r13-setoran-single-writer.js
+        run: sha256sum assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical.js assets/js/customer-funds.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js supabase/migrations/2026082200*_r13_*.sql tests/r13-nota-dana-titipan*.sql tests/r13-customer-funds-*.sql tests/r13-setoran-single-writer.js
 
   postgres-integration:
     name: PostgreSQL integration harness
@@ -108,7 +111,7 @@ jobs:
           SQL
       - name: Legacy retirement refuses non-empty schema
         run: |
-          if psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_legacy_cfc_retirement.sql; then
+          if psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220001_r13_legacy_cfc_retirement.sql; then
             echo "Retirement unexpectedly accepted non-empty legacy data" >&2
             exit 1
           fi
@@ -116,7 +119,7 @@ jobs:
           psql -h localhost -U postgres -d postgres -c "truncate public.bf_customer_fund_cases;"
       - name: Retire empty legacy fixture
         run: |
-          psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_legacy_cfc_retirement.sql
+          psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220001_r13_legacy_cfc_retirement.sql
           psql -h localhost -U postgres -d postgres -c "select case when to_regclass('public.bf_customer_fund_cases') is null and to_regclass('public.bf_entrusted_notes') is null then 1 else 1/0 end as retirement_ok;"
           psql -h localhost -U postgres -d postgres -c "select case when not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'bf_cfc_%') then 1 else 1/0 end as legacy_rpc_removed;"
       - name: Run core functional and permission tests
@@ -124,9 +127,9 @@ jobs:
         run: psql -h localhost -U postgres -d postgres -f r13-nota-dana-titipan.sql
       - name: Apply workflow control and signature migrations
         run: |
-          psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_nota_dana_titipan_workflow_controls.sql
-          psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_nota_dana_titipan_cash_hardening.sql
-          psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_nota_dana_titipan_signature_hardening.sql
+          psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220030_r13_nota_dana_titipan_workflow_controls.sql
+          psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220040_r13_nota_dana_titipan_cash_hardening.sql
+          psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220050_r13_nota_dana_titipan_signature_hardening.sql
       - name: Run mandatory signature tests
         working-directory: tests
         run: psql -h localhost -U postgres -d postgres -f r13-nota-dana-titipan-signature.sql
@@ -134,17 +137,17 @@ jobs:
         working-directory: tests
         run: psql -h localhost -U postgres -d postgres -f r13-nota-dana-titipan-workflow.sql
       - name: Apply Customer Funds foundation
-        run: psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_customer_funds_foundation.sql
+        run: psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220060_r13_customer_funds_foundation.sql
       - name: Run Customer Funds foundation tests
         working-directory: tests
         run: psql -h localhost -U postgres -d postgres -f r13-customer-funds-foundation.sql
       - name: Apply Customer Funds lifecycle
-        run: psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_customer_funds_lifecycle.sql
+        run: psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220070_r13_customer_funds_lifecycle.sql
       - name: Run Customer Funds lifecycle tests
         working-directory: tests
         run: psql -h localhost -U postgres -d postgres -f r13-customer-funds-lifecycle.sql
       - name: Migration replay idempotency
         run: |
-          psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_customer_funds_foundation.sql
-          psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_customer_funds_lifecycle.sql
+          psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220060_r13_customer_funds_foundation.sql
+          psql -h localhost -U postgres -d postgres -f supabase/migrations/202608220070_r13_customer_funds_lifecycle.sql
           psql -h localhost -U postgres -d postgres -c "select count(*)>=1 as replay_ok from public.bf_customer_fund_cases;"
