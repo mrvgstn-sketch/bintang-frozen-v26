@@ -14,6 +14,8 @@ const required=[
 "bf_cfc_create_case","bf_cfc_create_setoran","bf_cfc_record_transfer","bf_cfc_reconcile_transfer","bf_cfc_create_entrusted_note","bf_cfc_approve_entrusted_note","bf_cfc_create_cashback","bf_cfc_create_entrusted_fund","bf_cfc_mark_paid","bf_cfc_verify_payment","bf_cfc_reverse_obligation"
 ];required.forEach(x=>assert(sql.includes(x),`missing ${x}`));
 ["bf_cfc_update_entrusted_note","bf_cfc_reverse_payment","bf_cfc_reverse_transfer"].forEach(x=>assert(hard.includes(x),`missing hardening RPC ${x}`));
+["bf_cfc_update_entrusted_note","bf_cfc_reverse_payment","bf_cfc_reverse_transfer"].forEach(x=>assert(js.includes(x),`UI is not wired to ${x}`));
+assert(js.includes("data-editnote")&&js.includes("data-payrev")&&js.includes("data-trrev"),"hardening UI controls missing");
 assert(sql.includes("check(total_qty = bf_qty + entrusted_qty)"),"qty split constraint missing");
 assert(sql.includes("check(total_note_value = bf_right + party2_right)"),"note value split constraint missing");
 assert(sql.includes("bf_cfc_unique_cashback_source"),"cashback duplicate guard missing");
