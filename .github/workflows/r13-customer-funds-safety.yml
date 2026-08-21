@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - r13/customer-funds-control-20260822
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
