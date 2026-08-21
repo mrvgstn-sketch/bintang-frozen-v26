@@ -23,6 +23,8 @@ jobs:
           node-version: '22'
       - name: Run static harness
         run: node tests/r13-customer-funds-static.test.js
+      - name: Compute source snapshot SHA-256
+        run: git archive --format=tar HEAD | sha256sum
 
   postgres-integration:
     name: PostgreSQL integration harness
