@@ -18,15 +18,33 @@ const nativeRemove=localStorage.removeItem.bind(localStorage);
 const nativeStorageGet=localStorage.getItem.bind(localStorage);
 const beforeSet=[];
 const changeListeners=[];
+const READ_ONLY_LEGACY_KEYS=new Set(["bf_note_setoran_v26"]);
 let bypass=0;
 function notify(detail){for(const fn of changeListeners){try{fn(detail)}catch(err){console.error("[BFCore] storage listener",err)}}}
+function blockLegacyMutation(key,next){
+  const currentValue=nativeStorageGet(key);
+  if(!READ_ONLY_LEGACY_KEYS.has(String(key))||currentValue===String(next))return false;
+  console.error("[BFCore] blocked write to read-only legacy key",key);
+  window.dispatchEvent(new CustomEvent("bf:legacy-write-blocked",{detail:{key:String(key)}}));
+  return true;
+}
 localStorage.setItem=function(key,value){
   let next=String(value);
-  if(!bypass){for(const fn of beforeSet){const out=fn({key:String(key),value:next});if(out&&Object.prototype.hasOwnProperty.call(out,"value"))next=String(out.value)}}
+  if(!bypass){
+    if(blockLegacyMutation(key,next))return;
+    for(const fn of beforeSet){const out=fn({key:String(key),value:next});if(out&&Object.prototype.hasOwnProperty.call(out,"value"))next=String(out.value)}
+  }
   nativeSet(key,next);
   if(!bypass)notify({type:"set",key:String(key),value:next});
 };
-localStorage.removeItem=function(key){nativeRemove(key);if(!bypass)notify({type:"remove",key:String(key)});};
+localStorage.removeItem=function(key){
+  if(!bypass&&READ_ONLY_LEGACY_KEYS.has(String(key))&&nativeStorageGet(key)!==null){
+    console.error("[BFCore] blocked delete of read-only legacy key",key);
+    window.dispatchEvent(new CustomEvent("bf:legacy-write-blocked",{detail:{key:String(key),operation:"remove"}}));
+    return;
+  }
+  nativeRemove(key);if(!bypass)notify({type:"remove",key:String(key)});
+};
 
 const largeStore=(()=>{
   const DB="bf_v26_cache",STORE="large_values";let dbPromise=null;
@@ -59,7 +77,8 @@ const storage={
   removeRaw:key=>{bypass++;try{nativeRemove(key)}finally{bypass--}},
   transaction(fn){bypass++;try{return fn()}finally{bypass--}},
   beforeSet(fn){beforeSet.push(fn);return ()=>{const i=beforeSet.indexOf(fn);if(i>=0)beforeSet.splice(i,1)}},
-  onChange(fn){changeListeners.push(fn);return ()=>{const i=changeListeners.indexOf(fn);if(i>=0)changeListeners.splice(i,1)}}
+  onChange(fn){changeListeners.push(fn);return ()=>{const i=changeListeners.indexOf(fn);if(i>=0)changeListeners.splice(i,1)}},
+  isLegacyReadOnly:key=>READ_ONLY_LEGACY_KEYS.has(String(key))
 };
 
 function modal(title,html,{id="bf-core-modal",width=900,className=""}={}){
