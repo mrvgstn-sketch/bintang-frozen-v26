@@ -21,6 +21,7 @@ select (public.bf_nt_create_note(
  '[{"product_name":"BLD","total_qty":100,"bf_qty":50,"entrusted_qty":50,"note_unit_price":70000,"bf_sales_value":3250000}]'::jsonb,
  'note-mixed-001'
 )).id as note_id \gset
+select set_config('test.note_id', :'note_id', false);
 select public.test_assert(effective_note_total=7000000,'effective_note_total mismatch') from public.bf_entrusted_note_financials where note_id=:'note_id';
 select public.test_assert(effective_bf_right=3325000,'BF right must be 3.325.000') from public.bf_entrusted_note_financials where note_id=:'note_id';
 select public.test_assert(bf_fee=75000,'fee must apply only to entrusted 50kg') from public.bf_entrusted_note_financials where note_id=:'note_id';
@@ -41,7 +42,7 @@ select public.bf_nt_submit_note(:'note_id'::uuid);
 -- Admin cannot approve.
 do $$begin
  begin
-  perform public.bf_nt_approve_note(:'note_id'::uuid,'APPROVE',null);
+  perform public.bf_nt_approve_note(current_setting('test.note_id')::uuid,'APPROVE',null);
   raise exception 'EXPECTED_ADMIN_APPROVAL_DENIAL_NOT_RAISED';
  exception when others then
   if sqlerrm='EXPECTED_ADMIN_APPROVAL_DENIAL_NOT_RAISED' then raise; end if;
@@ -54,10 +55,11 @@ select public.bf_nt_approve_note(:'note_id'::uuid,'APPROVE','OK');
 
 set request.jwt.claim.sub='22222222-2222-2222-2222-222222222222';
 select (public.bf_nt_record_transfer(:'note_id'::uuid,3000000,current_date,'Restoran XYZ','[]'::jsonb,null,'tr-001')).id as tr1 \gset
+select set_config('test.tr1', :'tr1', false);
 -- Admin cannot confirm bank receipt.
 do $$begin
  begin
-  perform public.bf_nt_confirm_transfer(:'tr1'::uuid,3000000,'NONE',null);
+  perform public.bf_nt_confirm_transfer(current_setting('test.tr1')::uuid,3000000,'NONE',null);
   raise exception 'EXPECTED_ADMIN_CONFIRM_DENIAL_NOT_RAISED';
  exception when others then
   if sqlerrm='EXPECTED_ADMIN_CONFIRM_DENIAL_NOT_RAISED' then raise; end if;
@@ -73,7 +75,7 @@ select public.test_assert(not is_paid,'Note must not be paid after first install
 set request.jwt.claim.sub='22222222-2222-2222-2222-222222222222';
 do $$begin
  begin
-  perform public.bf_nt_create_payout(:'note_id'::uuid,100000,current_date,'Budi','Kesepakatan','data:image/png;base64,AAAAAAAAAAAAAA','[]'::jsonb,'Kas Penjualan Harian','early-pay');
+  perform public.bf_nt_create_payout(current_setting('test.note_id')::uuid,100000,current_date,'Budi','Kesepakatan','data:image/png;base64,AAAAAAAAAAAAAA','[]'::jsonb,'Kas Penjualan Harian','early-pay');
   raise exception 'EXPECTED_EARLY_PAYOUT_REJECTION_NOT_RAISED';
  exception when others then
   if sqlerrm='EXPECTED_EARLY_PAYOUT_REJECTION_NOT_RAISED' then raise; end if;
@@ -85,7 +87,7 @@ select (public.bf_nt_record_transfer(:'note_id'::uuid,4000000,current_date,'Reke
 -- Duplicate retry must fail by idempotency key.
 do $$begin
  begin
-  perform public.bf_nt_record_transfer(:'note_id'::uuid,4000000,current_date,'Rekening Andi','[]'::jsonb,'retry','tr-002');
+  perform public.bf_nt_record_transfer(current_setting('test.note_id')::uuid,4000000,current_date,'Rekening Andi','[]'::jsonb,'retry','tr-002');
   raise exception 'EXPECTED_DUPLICATE_REJECTION_NOT_RAISED';
  exception when unique_violation then null;
  end;
@@ -108,7 +110,7 @@ select public.test_assert(payout_outstanding=1668500,'Partial payout outstanding
 -- Overpaying Party2 is blocked.
 do $$begin
  begin
-  perform public.bf_nt_create_payout(:'note_id'::uuid,2000000,current_date,'Budi','Too much','data:image/png;base64,AAAAAAAAAAAAAAAAAAAA','[]'::jsonb,'Kas Penjualan Harian','payout-too-much');
+  perform public.bf_nt_create_payout(current_setting('test.note_id')::uuid,2000000,current_date,'Budi','Too much','data:image/png;base64,AAAAAAAAAAAAAAAAAAAA','[]'::jsonb,'Kas Penjualan Harian','payout-too-much');
   raise exception 'EXPECTED_PAYOUT_LIMIT_NOT_RAISED';
  exception when others then
   if sqlerrm='EXPECTED_PAYOUT_LIMIT_NOT_RAISED' then raise; end if;
@@ -126,8 +128,9 @@ select public.test_assert(entrusted_payout_total=2000000,'Dana Titipan must be s
 -- Operator cannot read security-invoker financial view.
 set request.jwt.claim.sub='33333333-3333-3333-3333-333333333333';
 set role authenticated;
-select public.test_assert(count(*)=0,'Operator must not read financial view') from public.bf_entrusted_note_financials;
+select count(*) as operator_visible_rows from public.bf_entrusted_note_financials \gset
 reset role;
+select public.test_assert(:operator_visible_rows::integer=0,'Operator must not read financial view');
 
 -- Authenticated direct write denied.
 set request.jwt.claim.sub='22222222-2222-2222-2222-222222222222';
