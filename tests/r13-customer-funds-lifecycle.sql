@@ -21,12 +21,9 @@ select public.cfl_assert((select count(*)=2 from public.bf_customer_fund_payout_
 select public.cfl_assert((select status='OUTSTANDING' from public.bf_customer_commission_obligations where id=:'comm1'::uuid),'pending payout does not falsely settle obligation');
 select public.cfl_assert((select available_amount=43500 from public.bf_customer_commission_balances where obligation_id=:'comm1'::uuid),'pending payout reserves first obligation');
 select public.cfl_assert((select available_amount=25000 from public.bf_customer_commission_balances where obligation_id=:'comm2'::uuid),'pending payout reserves second obligation');
-select public.cfl_assert((select count(*)=1 and amount=75000 and movement_type='CUSTOMER_COMMISSION' and status='POSTED' from public.bf_cash_movements where source_ref_type='CUSTOMER_FUND_PAYOUT' and source_ref_id=:'pay1'),'cash movement recorded exactly once at payment time');
+select public.cfl_assert((select count(*)=1 from public.bf_cash_movements where source_ref_type='CUSTOMER_FUND_PAYOUT' and source_ref_id=:'pay1' and amount=75000 and movement_type='CUSTOMER_COMMISSION' and status='POSTED'),'cash movement recorded exactly once at payment time');
 
 -- Cannot overcommit while payout awaits Owner.
-do $$begin begin
- perform public.bf_cf_create_payout('CUSTOMER_COMMISSION','CUST-ABC','CV ABC',30000,current_date,'Budi','too much','data:image/png;base64,abcdefghijklmnop',1,'[]'::jsonb,'Kas',jsonb_build_array(jsonb_build_object('obligation_id',current_setting('cfl.comm2')::uuid,'amount',30000)),'life-over');
- raise exception 'expected CF_PAYOUT_EXCEEDS_OBLIGATION';exception when others then if position('CF_PAYOUT_EXCEEDS_OBLIGATION' in sqlerrm)=0 then raise;end if;end;end$$;
 select set_config('cfl.comm2',:'comm2',false);
 do $$begin begin
  perform public.bf_cf_create_payout('CUSTOMER_COMMISSION','CUST-ABC','CV ABC',30000,current_date,'Budi','too much','data:image/png;base64,abcdefghijklmnop',1,'[]'::jsonb,'Kas',jsonb_build_array(jsonb_build_object('obligation_id',current_setting('cfl.comm2')::uuid,'amount',30000)),'life-over-2');
@@ -57,7 +54,6 @@ reset role;set role authenticated;select set_config('request.jwt.claim.sub','222
 select (public.bf_cf_propose_deposit_use('CUST-ABC',:'depref'::uuid,40000,'Pakai deposit ke nota','life-use')).id use1 \gset
 select public.cfl_assert((select available_amount=85000 from public.bf_customer_deposit_balances where customer_id='CUST-ABC'),'pending use reserves deposit');
 select public.cfl_assert((select remaining_amount=30000 from public.bf_customer_sales_settlements where sales_ref_id=:'depref'::uuid),'pending use reserves note capacity');
-do $$begin begin perform public.bf_cf_propose_deposit_use('CUST-ABC',current_setting('cfl.depref')::uuid,40000,'over note','life-use-over');raise exception 'expected CF_DEPOSIT_USE_EXCEEDS_NOTE';exception when others then if position('CF_DEPOSIT_USE_EXCEEDS_NOTE' in sqlerrm)=0 then raise;end if;end;end$$;
 select set_config('cfl.depref',:'depref',false);
 do $$begin begin perform public.bf_cf_propose_deposit_use('CUST-ABC',current_setting('cfl.depref')::uuid,40000,'over note','life-use-over-2');raise exception 'expected CF_DEPOSIT_USE_EXCEEDS_NOTE';exception when others then if position('CF_DEPOSIT_USE_EXCEEDS_NOTE' in sqlerrm)=0 then raise;end if;end;end$$;
 reset role;set role authenticated;select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111',false);select public.bf_cf_decide_deposit_use(:'use1'::uuid,'APPROVE','approved');
@@ -91,9 +87,8 @@ select public.cfl_assert((select deposit_refund_total=10000 from public.bf_cash_
 select public.cfl_assert((select expected_cash=1000000-entrusted_payout_total-commission_payout_total-refund_payout_total-deposit_refund_total from public.bf_cash_reconciliations where reconciliation_date=current_date),'cash formula consistent');
 
 -- Direct lifecycle DML and non-owner review are denied.
-reset role;set role authenticated;select set_config('request.jwt.claim.sub','22222222-2222-2222-2222-222222222222',false);
-do $$begin begin update public.bf_customer_fund_payouts set amount=1 where id=current_setting('cfl.pay1',true)::uuid;raise exception 'expected denied';exception when insufficient_privilege then null;end;end$$;
-select set_config('cfl.pay1',:'pay1',false);
+reset role;set role authenticated;select set_config('request.jwt.claim.sub','22222222-2222-2222-2222-222222222222',false);select set_config('cfl.pay1',:'pay1',false);
+do $$begin begin update public.bf_customer_fund_payouts set amount=1 where id=current_setting('cfl.pay1')::uuid;raise exception 'expected denied';exception when insufficient_privilege then null;end;end$$;
 do $$begin begin perform public.bf_cf_review_payout(current_setting('cfl.pay1')::uuid,'VERIFY','illegal');raise exception 'expected owner required';exception when others then if position('NT_OWNER_REQUIRED' in sqlerrm)=0 then raise;end if;end;end$$;
 
 reset role;select 'R13 Customer Funds lifecycle PostgreSQL harness PASS' result;
