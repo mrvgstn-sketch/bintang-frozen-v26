@@ -52,8 +52,12 @@ jobs:
           grep -q "CUSTOMER_COMMISSION" supabase/migrations/20260822_r13_customer_funds_foundation.sql
           grep -q "CUSTOMER_DEPOSIT" supabase/migrations/20260822_r13_customer_funds_foundation.sql
           grep -q "WRONG_TRANSFER_REFUND" supabase/migrations/20260822_r13_customer_funds_foundation.sql
+          grep -q "pending payout" tests/r13-customer-funds-lifecycle.sql
+          grep -q "bf_cf_reconcile_cash_day" supabase/migrations/20260822_r13_customer_funds_lifecycle.sql
+          grep -q "bf_customer_sales_settlements" supabase/migrations/20260822_r13_customer_funds_lifecycle.sql
+          grep -q "CUSTOMER_DEPOSIT_REFUND" supabase/migrations/20260822_r13_customer_funds_lifecycle.sql
       - name: Source snapshot SHA-256
-        run: sha256sum assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js supabase/migrations/20260822_r13_nota_dana_titipan*.sql supabase/migrations/20260822_r13_customer_funds_foundation.sql tests/r13-nota-dana-titipan*.sql tests/r13-customer-funds-foundation.sql tests/r13-setoran-single-writer.js
+        run: sha256sum assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js supabase/migrations/20260822_r13_nota_dana_titipan*.sql supabase/migrations/20260822_r13_customer_funds_*.sql tests/r13-nota-dana-titipan*.sql tests/r13-customer-funds-*.sql tests/r13-setoran-single-writer.js
 
   postgres-integration:
     name: PostgreSQL integration harness
@@ -97,3 +101,8 @@ jobs:
       - name: Run Customer Funds foundation tests
         working-directory: tests
         run: psql -h localhost -U postgres -d postgres -f r13-customer-funds-foundation.sql
+      - name: Apply Customer Funds lifecycle
+        run: psql -h localhost -U postgres -d postgres -f supabase/migrations/20260822_r13_customer_funds_lifecycle.sql
+      - name: Run Customer Funds lifecycle tests
+        working-directory: tests
+        run: psql -h localhost -U postgres -d postgres -f r13-customer-funds-lifecycle.sql
