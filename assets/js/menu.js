@@ -2,10 +2,10 @@
 "use strict";
 let activeWrap=null;
 function menuHTML(){
-  const can=window.BFCore.can,role=(window.BFCurrentUser?.()?.profile?.role||"").toLowerCase(),owner=role==="owner",funds=owner||role==="admin",item=(show,html)=>show?html:"";
+  const can=window.BFCore.can,role=(window.BFCurrentUser?.()?.profile?.role||"").toLowerCase(),owner=role==="owner",item=(show,html)=>show?html:"";
   return '<div class="bf-app-menu-head">Menu Bintang Frozen</div>'+ section('🏠 DASHBOARD',item(true,button('🏠 Dashboard','Pusat kontrol aplikasi','route','dashboard')))+
     section('📦 TRANSAKSI',item(can('view_in'),button('📥 Barang Masuk','Transaksi & Tally Timbangan','action','transactions-in'))+item(can('view_out'),button('📤 Barang Keluar','Transaksi & Tally Timbangan','action','transactions-out'))+item(can('view_tally'),button('⚖️ Tally Timbangan','Masuk / Keluar','action','tally')))+
-    section('💰 KEUANGAN',item(can('view_finance')||can('view_note'),button('💰 Pengeluaran','Catatan pengeluaran','action','finance-expense'))+item(can('view_finance')||can('view_note'),button('🏦 Setoran','Canonical backend • legacy read-only','action','finance-deposit'))+item(funds,button('🧾 Kontrol Dana Customer','Rekonsiliasi • Cashback • Nota/Dana Titipan','action','customer-funds'))+item(owner&&can('view_commission'),button('💸 Komisi','Otomatis per Customer/Marketing','action','commission'))+item(can('view_finance')||can('view_note'),button('🛒 Sembako','Catatan sembako','action','finance-grocery')))+
+    section('💰 KEUANGAN',item(can('view_finance')||can('view_note'),button('💰 Pengeluaran','Catatan pengeluaran','action','finance-expense'))+item(can('view_finance')||can('view_note'),button('🏦 Setoran','Catatan setoran','action','finance-deposit'))+item(owner&&can('view_commission'),button('💸 Komisi','Otomatis per Customer/Marketing','action','commission'))+item(can('view_finance')||can('view_note'),button('🛒 Sembako','Catatan sembako','action','finance-grocery')))+
     section('📋 DATA MASTER',item(can('view_products'),button('📦 Produk','Data master produk','action','products'))+item(can('view_suppliers'),button('🚚 Supplier','Data master supplier','action','suppliers'))+item(can('view_customers'),button('👥 Customer','Data master customer','action','customers')))+
     section('📊 LAPORAN',item(can('view_history')||can('request_history'),button('📚 Histori','Transaksi dan perubahan terakhir','action','history-detail'))+item(can('view_reports'),button('📊 Laporan Detail','Semua detail transaksi dan Tally','action','reports'))+item(can('export_pdf')||can('export_csv'),button('📄 Export PDF / CSV','Pilih periode dan kategori','action','exports')))+
     section('🚚 PENGANTARAN',item(owner,button('📍 Live Driver Location','Posisi Driver • Owner-only','action','driver-location')))+
@@ -40,7 +40,7 @@ function bind(wrap){
   });
   pop.addEventListener('click',e=>{
     const it=e.target.closest('.bf-app-menu-item');if(!it)return;let ok=false;
-    const actionMap={'transactions-in':'BFOpenTransactionsIn','transactions-out':'BFOpenTransactionsOut','tally':'BFOpenTallyChooser','finance-expense':'BFOpenFinanceExpense','finance-deposit':'BFOpenFinanceDeposit','customer-funds':'BFOpenCustomerFunds','finance-grocery':'BFOpenFinanceGrocery','commission':'BFOpenCommission','products':'BFOpenProducts','suppliers':'BFOpenSuppliers','customers':'BFOpenCustomers','employees':'BFOpenEmployees','reports':'BFOpenReports','history-detail':'BFOpenDetailedHistory','exports':'BFOpenExports','backup':'BFOpenBackup','driver-location':'BFOpenDriverLocation'};
+    const actionMap={'transactions-in':'BFOpenTransactionsIn','transactions-out':'BFOpenTransactionsOut','tally':'BFOpenTallyChooser','finance-expense':'BFOpenFinanceExpense','finance-deposit':'BFOpenFinanceDeposit','finance-grocery':'BFOpenFinanceGrocery','commission':'BFOpenCommission','products':'BFOpenProducts','suppliers':'BFOpenSuppliers','customers':'BFOpenCustomers','employees':'BFOpenEmployees','reports':'BFOpenReports','history-detail':'BFOpenDetailedHistory','exports':'BFOpenExports','backup':'BFOpenBackup','driver-location':'BFOpenDriverLocation'};
     if(it.dataset.action){const fn=actionMap[it.dataset.action];if(fn&&typeof window[fn]==='function'){window[fn]();ok=true}}
     if(it.dataset.owner){const om={users:'bfOpenUsers',permissions:'bfOpenPermissions',requests:'bfOpenRequests',audit:'bfOpenAudit',deleted:'BFOpenDeletedData'},fn=om[it.dataset.owner];if(fn&&typeof window[fn]==='function'){window[fn]();ok=true}}
     if(it.dataset.route)ok=navigate(it.dataset.route)||ok;if(ok)close(wrap);
@@ -56,7 +56,4 @@ if(!window.__bfMenuGlobalListeners){
 function bindCanonical(){return bind(document.getElementById('bf-app-menu-anchor'))}
 window.addEventListener('bf:main-mounted',bindCanonical);
 bindCanonical();
-if(!document.getElementById('bf-customer-funds-module')){
-  const s=document.createElement('script');s.id='bf-customer-funds-module';s.src='assets/js/customer-funds-control.js?v=r13z-customer-funds';s.defer=true;document.head.appendChild(s);
-}
 })();
