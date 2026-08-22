@@ -21,7 +21,7 @@ jobs:
         run: |
           node --check assets/js/menu.js
           node --check assets/js/schema-migrations.js
-          node --check assets/js/setoran-canonical.js
+          node --check assets/js/setoran-canonical-split.js
           node --check assets/js/customer-funds.js
           node --check assets/js/nota-dana-titipan.js
           node --check assets/js/nota-dana-titipan-controls.js
@@ -51,10 +51,11 @@ jobs:
           grep -q "NT_SIGNATURE_STROKES_REQUIRED" supabase/migrations/202608220050_r13_nota_dana_titipan_signature_hardening.sql
           grep -q "BLOCKED non-canonical Setoran writer" assets/js/schema-migrations.js
           grep -q "window.BFSetoranStore" assets/js/schema-migrations.js
-          grep -q "Customer ID stabil" assets/js/setoran-canonical.js
-          grep -q "GAGAL / BELUM TERSINKRON" assets/js/setoran-canonical.js
-          grep -q "bf_cf_record_case" assets/js/setoran-canonical.js
-          grep -q "Retry Customer Funds" assets/js/setoran-canonical.js
+          grep -q "bf_note_setoran_v26" assets/js/setoran-canonical-split.js
+          grep -q "bf_cf_record_case" assets/js/setoran-canonical-split.js
+          grep -q "bf_cf_submit_setoran" assets/js/setoran-canonical-split.js
+          grep -q "bf_cf_cancel_setoran" assets/js/setoran-canonical-split.js
+          grep -q "cloudAck" assets/js/setoran-canonical-split.js
           grep -q "loadCanonicalSetoran" assets/js/menu.js
           grep -q "loadCustomerFunds" assets/js/menu.js
           grep -q "Dana Customer" assets/js/menu.js
@@ -79,7 +80,7 @@ jobs:
         run: |
           test "$(find supabase/migrations -maxdepth 1 -type f -name '2026082200*_r13_*.sql' -printf '%f\n' | sort | tr '\n' ' ')" = "202608220001_r13_legacy_cfc_retirement.sql 202608220010_r13_nota_dana_titipan.sql 202608220020_r13_nota_dana_titipan_hardening.sql 202608220030_r13_nota_dana_titipan_workflow_controls.sql 202608220040_r13_nota_dana_titipan_cash_hardening.sql 202608220050_r13_nota_dana_titipan_signature_hardening.sql 202608220060_r13_customer_funds_foundation.sql 202608220070_r13_customer_funds_lifecycle.sql "
       - name: Source snapshot SHA-256
-        run: sha256sum index.html assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical.js assets/js/customer-funds.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js assets/js/customer-pic-setoran-history.js supabase/migrations/2026082200*_r13_*.sql tests/r13-nota-dana-titipan*.sql tests/r13-customer-funds-*.sql tests/r13-setoran-single-writer.js tests/r13-customer-pic-setoran-history.js
+        run: sha256sum index.html assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical-split.js assets/js/customer-funds.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js assets/js/customer-pic-setoran-history.js supabase/migrations/2026082200*_r13_*.sql tests/r13-nota-dana-titipan*.sql tests/r13-customer-funds-*.sql tests/r13-setoran-single-writer.js tests/r13-customer-pic-setoran-history.js
 
   postgres-integration:
     name: PostgreSQL integration harness
