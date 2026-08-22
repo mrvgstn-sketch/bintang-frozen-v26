@@ -17,6 +17,7 @@ jobs:
       - name: Syntax checks
         run: |
           node --check assets/js/menu.js
+          node --check assets/js/setoran-canonical.js
           node --check assets/js/setoran-canonical-split.js
           node --check assets/js/cash-reconciliation.js
       - name: Existing-base and no-duplicate guards
@@ -29,7 +30,10 @@ jobs:
           grep -q "bf_cash_reconciliations" assets/js/cash-reconciliation.js
           grep -q "Catatan Setoran Customer tidak dihitung otomatis" assets/js/cash-reconciliation.js
           grep -q "cash-reconciliation" assets/js/menu.js
-          ! test -f assets/js/setoran-canonical.js
+          grep -q "Compatibility helper only" assets/js/setoran-canonical.js
+          ! grep -q "window.BFOpenCanonicalSetoran=" assets/js/setoran-canonical.js
+          ! grep -q "BFSetoranStore.write" assets/js/setoran-canonical.js
+          grep -q "setoran-canonical-split.js" assets/js/menu.js
           ! grep -E "setoran_v2|reconciliation_v2|cash_balance_v2|pengeluaran_v2" assets/js/setoran-canonical-split.js assets/js/cash-reconciliation.js supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
           ! grep -E "\.(insert|update|delete)\(" assets/js/setoran-canonical-split.js assets/js/cash-reconciliation.js
           grep -q "Customer Setoran is intentionally NOT included as cash-in" supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
@@ -41,7 +45,7 @@ jobs:
           grep -q "revoke execute on function public.bf_cash_submit_reconciliation.*from anon" supabase/migrations/202608230030_r13_setoran_cash_reconciliation_anon_acl.sql
           test "$(find supabase/migrations -maxdepth 1 -type f -printf '%f\n' | cut -d_ -f1 | sort | uniq -d | wc -l)" -eq 0
       - name: Source snapshot
-        run: sha256sum assets/js/menu.js assets/js/setoran-canonical-split.js assets/js/cash-reconciliation.js supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql supabase/migrations/202608230030_r13_setoran_cash_reconciliation_anon_acl.sql tests/r13-setoran-cash-reconciliation.sql
+        run: sha256sum assets/js/menu.js assets/js/setoran-canonical.js assets/js/setoran-canonical-split.js assets/js/cash-reconciliation.js supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql supabase/migrations/202608230030_r13_setoran_cash_reconciliation_anon_acl.sql tests/r13-setoran-cash-reconciliation.sql
 
   postgres-integration:
     name: PostgreSQL split and cash lifecycle
