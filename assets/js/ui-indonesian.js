@@ -3,31 +3,33 @@
 if(window.BFUIIndonesian)return;
 
 const EXACT=new Map(Object.entries({
-  "Dashboard":"Beranda",
+  "Dashboard":"Ringkasan",
   "Pusat kontrol aplikasi":"Pusat kendali aplikasi",
   "Canonical • Customer ID • Cloud + Funds ACK":"Catatan setoran Customer • tersimpan dan tersinkron",
   "Komisi Customer • Deposit • Refund • Rekonsiliasi":"Komisi Customer • Dana Titipan • Pengembalian Dana • Rekonsiliasi",
   "Koreksi • Reversal • Customer History":"Koreksi • Pembatalan • Riwayat Customer",
   "Export PDF / CSV":"Ekspor PDF / CSV",
+  "Export Gabungan CSV":"Ekspor Gabungan CSV",
   "Live Driver Location":"Lokasi Driver",
   "Posisi Driver • Owner-only":"Posisi Driver • khusus Owner",
   "Staff":"Karyawan",
-  "Manajemen karyawan":"Manajemen karyawan",
   "Akun Google & role":"Akun Google & peran",
   "Permission per fitur":"Hak akses per fitur",
   "Approve / reject":"Setujui / Tolak",
   "Log Aktivitas":"Riwayat Aktivitas",
   "Backup Google Drive":"Cadangan Google Drive",
+  "Backup Drive":"Cadangan Drive",
   "Full Backup & Restore":"Cadangan Lengkap & Pemulihan",
   "Reset Filter":"Hapus Filter",
+  "Filter":"Saring",
   "Custom":"Rentang Tanggal",
   "Online":"Terhubung",
   "Offline":"Tidak Terhubung",
   "TALLY SHEET PRO":"SISTEM OPERASIONAL BINTANG FROZEN",
+  "TALLY SHEET":"LEMBAR TIMBANG",
   "ITEM":"BARANG",
   "QTY":"JUMLAH",
   "REAL KG":"TIMBANG KG",
-  "TOTAL KG":"TOTAL KG",
   "AVG KG":"RATA-RATA",
   "COUNT":"JUMLAH TIMBANG",
   "klik detail":"Lihat detail",
@@ -49,12 +51,19 @@ const EXACT=new Map(Object.entries({
   "Latitude":"Garis Lintang",
   "Longitude":"Garis Bujur",
   "Owner-only":"Khusus Owner",
+  "Login":"Masuk",
   "Logout":"Keluar",
+  "Upload":"Unggah",
+  "Download":"Unduh",
+  "Restore":"Pulihkan",
+  "Backup":"Cadangan",
+  "Export":"Ekspor",
+  "Retry":"Coba Lagi",
+  "retry":"coba lagi",
   "Customer Commission • Deposit • Refund • maker-checker":"Komisi Customer • Dana Titipan • Pengembalian Dana • Pemeriksaan Berjenjang",
   "Refund":"Pengembalian Dana",
   "Deposit":"Dana Titipan",
   "Payout":"Pencairan Dana",
-  "Dashboard":"Ringkasan",
   "Komisi Customer Outstanding":"Sisa Komisi Customer",
   "Refund Outstanding":"Sisa Pengembalian Dana",
   "Deposit Available":"Dana Titipan Tersedia",
@@ -74,6 +83,7 @@ const EXACT=new Map(Object.entries({
   "Amount":"Nominal",
   "Validate":"Validasi",
   "Confirm":"Konfirmasi",
+  "ALL":"Semua",
   "PENDING_OWNER":"Menunggu Persetujuan Owner",
   "CORRECTION_REQUIRED":"Perlu Koreksi",
   "APPROVED":"Disetujui",
@@ -87,24 +97,24 @@ const EXACT=new Map(Object.entries({
   "BANK_FEE":"Biaya Bank",
   "OTHER":"Lainnya",
   "NONE":"Tidak Ada",
-  "CUSTOMER":"CUSTOMER",
   "BF":"Bintang Frozen",
+  "LEGACY":"Catatan Lama",
+  "LEGACY_MIXED":"Metode Campuran / Catatan Lama",
+  "MISSING":"Belum Tercatat",
+  "SETORAN_GUIDED":"Setoran Terpandu",
+  "CUSTOMER_COMMISSION":"Komisi Customer",
+  "CUSTOMER_DEPOSIT":"Dana Titipan Customer",
+  "CUSTOMER_DEPOSIT_REFUND":"Pengembalian Dana Titipan Customer",
+  "WRONG_TRANSFER_REFUND":"Pengembalian Transfer Salah",
   "handed_over":"Sudah Diserahkan",
   "carried":"Sedang Dibawa Supir",
   "delivered":"Sudah Diantar",
   "entered":"Sudah Dicatat",
   "needs_update":"Perlu Diperbarui",
   "Non-Tunai (Legacy)":"Non-Tunai (Catatan Lama)",
-  "Metode Campuran / Catatan Lama":"Metode Campuran / Catatan Lama",
-  "Catatan Lama / Dana Customer":"Catatan Lama / Dana Customer",
   "role":"peran",
   "Role":"Peran",
-  "Permission":"Hak Akses",
-  "Backup":"Cadangan",
-  "Restore":"Pulihkan",
-  "Export":"Ekspor",
-  "Retry":"Coba Lagi",
-  "retry":"coba lagi"
+  "Permission":"Hak Akses"
 }));
 
 const SENTENCES=new Map(Object.entries({
@@ -122,8 +132,7 @@ const SENTENCES=new Map(Object.entries({
   "Semua saldo berasal dari ledger/RPC backend. Komisi Marketing lama tetap terpisah.":"Semua saldo dihitung dari transaksi yang tercatat. Komisi Marketing lama tetap terpisah.",
   "Data material berubah setelah koreksi terakhir.":"Data penting berubah setelah pemeriksaan terakhir.",
   "Real lebih rendah dari invoice":"Hasil timbang lebih rendah dari nota",
-  "Real lebih tinggi dari invoice":"Hasil timbang lebih tinggi dari nota",
-  "Sesuai":"Sesuai"
+  "Real lebih tinggi dari invoice":"Hasil timbang lebih tinggi dari nota"
 }));
 
 const TECHNICAL=/\b(?:SQL|RPC|Supabase|backend|schema|migration|payload|constraint|stack trace|R13[A-Z0-9-]*|ACK|timestamp|flag Online)\b/i;
@@ -143,9 +152,12 @@ function exact(value){
   return mapped===undefined?raw:preserveWhitespace(raw,mapped);
 }
 function translatePattern(value){
-  let text=exact(value),core=coreText(text);
-  if(!core)return text;
+  const original=String(value??"");
+  let core=coreText(exact(original));
+  if(!core)return original;
   if(/^Login Google gagal:/i.test(core))core=core.replace(/^Login Google gagal:/i,"Gagal masuk dengan Google:");
+  if(/^Logout gagal:/i.test(core))core=core.replace(/^Logout gagal:/i,"Gagal keluar:");
+  if(/^Upload foto nota gagal:/i.test(core))core=core.replace(/^Upload foto nota gagal:/i,"Foto nota gagal diunggah:");
   if(/^Safe Delete menolak transaksi ini karena state sensitif:/i.test(core))core=core.replace(/^Safe Delete menolak transaksi ini karena state sensitif:/i,"Transaksi tidak dapat dihapus karena sudah memiliki proses penting yang tercatat:");
   core=core
     .replace(/\bDelivery Proof\b/g,"Bukti Pengantaran")
@@ -162,23 +174,29 @@ function translatePattern(value){
     .replace(/\bCash Status\b/g,"Status Uang Tunai")
     .replace(/\bCustomer Pickup\b/g,"Diambil Customer")
     .replace(/\bUpdate Server\b/g,"Terakhir Diperbarui")
-    .replace(/\bNon-Tunai \(Legacy\)\b/g,"Non-Tunai (Catatan Lama)");
-  if(TECHNICAL.test(core)){
-    if(/gagal|tidak dapat|belum siap|error|failed|timeout/i.test(core))return preserveWhitespace(String(value),"Data belum dapat diproses. Coba lagi. Jika masalah berlanjut, hubungi Admin.");
+    .replace(/\bNon-Tunai \(Legacy\)\b/g,"Non-Tunai (Catatan Lama)")
+    .replace(/\bPreview\b/g,"Pratinjau")
+    .replace(/\bUpload\b/g,"Unggah")
+    .replace(/\bDownload\b/g,"Unduh")
+    .replace(/\bRestore\b/g,"Pulihkan")
+    .replace(/\bBackup\b/g,"Cadangan")
+    .replace(/\bExport\b/g,"Ekspor");
+  if(TECHNICAL.test(core)&&/gagal|tidak dapat|belum siap|error|failed|timeout/i.test(core)){
+    return preserveWhitespace(original,"Data belum dapat diproses. Coba lagi. Jika masalah berlanjut, hubungi Admin.");
   }
-  return preserveWhitespace(String(value),core);
+  return preserveWhitespace(original,core);
 }
 function translateStatus(value){
-  const core=coreText(value);
-  if(EXACT.has(core))return preserveWhitespace(String(value),EXACT.get(core));
-  if(RAW_ENUM.test(core)&&core.includes("_"))return String(value);
-  return translatePattern(value);
+  const original=String(value??""),core=coreText(original);
+  if(EXACT.has(core))return preserveWhitespace(original,EXACT.get(core));
+  if(RAW_ENUM.test(core)&&core.includes("_"))return preserveWhitespace(original,"Status tidak dikenali");
+  return translatePattern(original);
 }
 function translate(value){return translateStatus(value)}
 
 function shouldTranslateTextNode(node){
   const p=node?.parentElement;if(!p||SKIP_TAGS.has(p.tagName))return false;
-  if(p.closest("[data-bf-ui-no-translate]"))return false;
+  if(p.closest("[data-bf-ui-no-translate],[contenteditable='true']"))return false;
   return true;
 }
 function translateNode(node){
@@ -187,7 +205,7 @@ function translateNode(node){
     const next=translate(node.nodeValue);if(next!==node.nodeValue)node.nodeValue=next;return;
   }
   if(node.nodeType!==Node.ELEMENT_NODE)return;
-  const el=node;if(SKIP_TAGS.has(el.tagName)||el.matches("[data-bf-ui-no-translate]")||el.closest("[data-bf-ui-no-translate]"))return;
+  const el=node;if(SKIP_TAGS.has(el.tagName)||el.matches("[data-bf-ui-no-translate],[contenteditable='true']")||el.closest("[data-bf-ui-no-translate],[contenteditable='true']"))return;
   for(const attr of ATTRS){if(el.hasAttribute(attr)){const old=el.getAttribute(attr),next=translate(old);if(next!==old)el.setAttribute(attr,next)}}
   for(const child of [...el.childNodes])translateNode(child);
 }
