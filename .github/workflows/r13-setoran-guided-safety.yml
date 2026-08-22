@@ -17,21 +17,25 @@ jobs:
       - name: Syntax and logic checks
         run: |
           node --check assets/js/setoran-canonical.js
+          node --check assets/js/setoran-canonical-split.js
           node --check assets/js/customer-pic-setoran-history.js
           node --check tests/r13-customer-pic-setoran-history.js
           node tests/r13-setoran-single-writer.js
           node tests/r13-customer-pic-setoran-history.js
       - name: Existing-base and no-duplicate guards
         run: |
-          grep -q "bf_note_setoran_v26" assets/js/setoran-canonical.js
-          grep -q "bf_cf_record_case" assets/js/setoran-canonical.js
-          grep -q "bf_cf_submit_setoran_flow" assets/js/setoran-canonical.js
-          grep -q "Nominal Komisi tidak dapat diedit" assets/js/setoran-canonical.js
-          grep -q "Pilih Customer Aktif" assets/js/setoran-canonical.js
+          grep -q "bf_note_setoran_v26" assets/js/setoran-canonical-split.js
+          grep -q "bf_cf_record_case" assets/js/setoran-canonical-split.js
+          grep -q "bf_cf_submit_setoran" assets/js/setoran-canonical-split.js
+          grep -q "Nominal Komisi tidak dapat diedit" assets/js/setoran-canonical-split.js
+          grep -q "Pilih Customer Aktif" assets/js/setoran-canonical-split.js
+          grep -q "Compatibility helper only" assets/js/setoran-canonical.js
+          ! grep -q "window.BFOpenCanonicalSetoran=" assets/js/setoran-canonical.js
+          ! grep -q "BFSetoranStore.write" assets/js/setoran-canonical.js
           grep -q "Perlu Perhatian Anda" assets/js/customer-pic-setoran-history.js
           grep -q "source_mode='SETORAN_GUIDED'" supabase/migrations/202608221000_r13_setoran_commission_guided.sql
-          ! grep -E "setoran_v2|customer_v2|commission_v2" assets/js/setoran-canonical.js assets/js/customer-pic-setoran-history.js supabase/migrations/202608221000_r13_setoran_commission_guided.sql
-          ! grep -E "actual_sender.*input|Actual Sender" assets/js/setoran-canonical.js
+          ! grep -E "setoran_v2|customer_v2|commission_v2" assets/js/setoran-canonical-split.js assets/js/customer-pic-setoran-history.js supabase/migrations/202608221000_r13_setoran_commission_guided.sql
+          ! grep -E "actual_sender.*input|Actual Sender" assets/js/setoran-canonical-split.js
 
   guided-postgres:
     name: Guided Setoran PostgreSQL integration

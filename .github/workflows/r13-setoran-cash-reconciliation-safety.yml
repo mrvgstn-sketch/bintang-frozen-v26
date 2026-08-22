@@ -17,6 +17,7 @@ jobs:
       - name: Syntax checks
         run: |
           node --check assets/js/menu.js
+          node --check assets/js/setoran-canonical.js
           node --check assets/js/setoran-canonical-split.js
           node --check assets/js/cash-reconciliation.js
       - name: Existing-base and no-duplicate guards
@@ -29,6 +30,10 @@ jobs:
           grep -q "bf_cash_reconciliations" assets/js/cash-reconciliation.js
           grep -q "Catatan Setoran Customer tidak dihitung otomatis" assets/js/cash-reconciliation.js
           grep -q "cash-reconciliation" assets/js/menu.js
+          grep -q "Compatibility helper only" assets/js/setoran-canonical.js
+          ! grep -q "window.BFOpenCanonicalSetoran=" assets/js/setoran-canonical.js
+          ! grep -q "BFSetoranStore.write" assets/js/setoran-canonical.js
+          grep -q "setoran-canonical-split.js" assets/js/menu.js
           ! grep -E "setoran_v2|reconciliation_v2|cash_balance_v2|pengeluaran_v2" assets/js/setoran-canonical-split.js assets/js/cash-reconciliation.js supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
           ! grep -E "\.(insert|update|delete)\(" assets/js/setoran-canonical-split.js assets/js/cash-reconciliation.js
           grep -q "Customer Setoran is intentionally NOT included as cash-in" supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
@@ -36,8 +41,11 @@ jobs:
           grep -q "return public.bf_cf_submit_setoran" supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
           grep -q "revoke all on function public.bf_cf_submit_setoran" supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql
           grep -q "grant execute on function public.bf_cash_submit_reconciliation" supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql
+          grep -q "revoke execute on function public.bf_cf_submit_setoran.*from anon" supabase/migrations/202608230030_r13_setoran_cash_reconciliation_anon_acl.sql
+          grep -q "revoke execute on function public.bf_cash_submit_reconciliation.*from anon" supabase/migrations/202608230030_r13_setoran_cash_reconciliation_anon_acl.sql
+          test "$(find supabase/migrations -maxdepth 1 -type f -printf '%f\n' | cut -d_ -f1 | sort | uniq -d | wc -l)" -eq 0
       - name: Source snapshot
-        run: sha256sum assets/js/menu.js assets/js/setoran-canonical-split.js assets/js/cash-reconciliation.js supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql tests/r13-setoran-cash-reconciliation.sql
+        run: sha256sum assets/js/menu.js assets/js/setoran-canonical.js assets/js/setoran-canonical-split.js assets/js/cash-reconciliation.js supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql supabase/migrations/202608230030_r13_setoran_cash_reconciliation_anon_acl.sql tests/r13-setoran-cash-reconciliation.sql
 
   postgres-integration:
     name: PostgreSQL split and cash lifecycle
@@ -92,11 +100,12 @@ jobs:
         run: |
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608230030_r13_setoran_cash_reconciliation_anon_acl.sql
       - name: Verify explicit RPC privileges
         run: |
-          psql -At -h localhost -U postgres -d postgres -c "select has_function_privilege('public','public.bf_cf_submit_setoran(uuid,text,text,numeric,date,jsonb,jsonb,boolean,text,text)','EXECUTE');" | grep -qx 'f'
+          psql -At -h localhost -U postgres -d postgres -c "select has_function_privilege('anon','public.bf_cf_submit_setoran(uuid,text,text,numeric,date,jsonb,jsonb,boolean,text,text)','EXECUTE');" | grep -qx 'f'
           psql -At -h localhost -U postgres -d postgres -c "select has_function_privilege('authenticated','public.bf_cf_submit_setoran(uuid,text,text,numeric,date,jsonb,jsonb,boolean,text,text)','EXECUTE');" | grep -qx 't'
-          psql -At -h localhost -U postgres -d postgres -c "select has_function_privilege('public','public.bf_cash_submit_reconciliation(date,text,numeric,numeric,numeric,numeric,numeric,numeric,numeric,text,bigint)','EXECUTE');" | grep -qx 'f'
+          psql -At -h localhost -U postgres -d postgres -c "select has_function_privilege('anon','public.bf_cash_submit_reconciliation(date,text,numeric,numeric,numeric,numeric,numeric,numeric,numeric,text,bigint)','EXECUTE');" | grep -qx 'f'
           psql -At -h localhost -U postgres -d postgres -c "select has_function_privilege('authenticated','public.bf_cash_submit_reconciliation(date,text,numeric,numeric,numeric,numeric,numeric,numeric,numeric,text,bigint)','EXECUTE');" | grep -qx 't'
       - name: Run split Setoran and daily cash tests
         working-directory: tests
@@ -105,5 +114,7 @@ jobs:
         run: |
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608230030_r13_setoran_cash_reconciliation_anon_acl.sql
           psql -At -h localhost -U postgres -d postgres -c "select count(*)=1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='bf_cf_submit_setoran';" | grep -qx 't'
           psql -At -h localhost -U postgres -d postgres -c "select count(*)=1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='bf_cash_submit_reconciliation';" | grep -qx 't'
+          psql -At -h localhost -U postgres -d postgres -c "select has_function_privilege('anon','public.bf_cf_submit_setoran(uuid,text,text,numeric,date,jsonb,jsonb,boolean,text,text)','EXECUTE');" | grep -qx 'f'
