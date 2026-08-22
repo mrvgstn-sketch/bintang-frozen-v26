@@ -1,0 +1,49 @@
+name: UI Indonesian Safety
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  ui-indonesian-safety:
+    name: UI Indonesian runtime safety
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax checks
+        run: |
+          node --check assets/js/ui-indonesian.js
+          node --check assets/js/menu.js
+          node --check assets/js/owner-control.js
+          node --check assets/js/driver-location.js
+          node --check assets/js/driver-delivery.js
+          node --check assets/js/data-model.js
+          node --check tests/ui-indonesian-runtime.js
+      - name: Presentation behavior tests
+        run: node tests/ui-indonesian-runtime.js
+      - name: Internal-contract preservation guards
+        run: |
+          grep -q "finance-deposit" assets/js/menu.js
+          grep -q "customer-funds" assets/js/menu.js
+          grep -q "bf_driver_location_push" assets/js/driver-location.js
+          grep -q "bf_owner_driver_locations" assets/js/driver-location.js
+          grep -q "bf_driver_tasks" assets/js/driver-delivery.js
+          grep -q "bf_driver_mark_delivered_geo" assets/js/driver-delivery.js
+          grep -q 'return \["cash","transfer","qris","credit","non_cash"\]' assets/js/data-model.js
+          grep -q "MutationObserver" assets/js/ui-indonesian.js
+      - name: Canonical user-facing leakage guards
+        run: |
+          ! grep -E "Live Driver Location|Owner-only|Customer Pickup|Safe Delete menolak|Non-Tunai \(Legacy\)" assets/js/menu.js assets/js/owner-control.js assets/js/driver-location.js assets/js/driver-delivery.js assets/js/data-model.js
+          ! grep -E "Pastikan SQL R13O|Pastikan SQL R13O dan R13N|Supabase belum siap" assets/js/driver-location.js assets/js/driver-delivery.js
+      - name: Asset-version guards
+        run: |
+          grep -q "ui-indonesian.js?v=20260822-runtime-id2" index.html
+          grep -q "data-model.js?v=20260822-runtime-id2" index.html
+          grep -q "driver-location.js?v=20260822-runtime-id2" index.html
+          grep -q "driver-delivery.js?v=20260822-runtime-id2" index.html
+          grep -q "menu.js?v=20260822-runtime-id2" index.html
+          grep -q "owner-control.js?v=20260822-runtime-id2" index.html
