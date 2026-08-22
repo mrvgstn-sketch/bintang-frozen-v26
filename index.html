@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -71,25 +71,25 @@
 <div id="bfTallyOverlay" style="display:none">
   <div id="bfTallyModal">
     <div class="bfTally-head">
-      <div><div class="bfTally-title">TALLY SHEET</div><div class="bfTally-sub">Timbangan real per kolom • detail timbangan • siap cetak</div></div>
+      <div><div class="bfTally-title">LEMBAR TIMBANG</div><div class="bfTally-sub">Timbangan aktual per kolom • detail timbangan • siap cetak</div></div>
       <div class="bfTally-actions">
         <button class="bfTally-btn primary" id="bfTallyAddRow">＋ Baris</button>
-        <button class="bfTally-btn dark" id="bfTallyAddCol">＋ Kolom Real</button>
+        <button class="bfTally-btn dark" id="bfTallyAddCol">＋ Kolom Timbang</button>
         <button class="bfTally-btn" id="bfTallyPrint">🖨 Cetak</button>
         <button class="bfTally-btn" id="bfTallyCsv">⇩ CSV</button>
-        <button class="bfTally-btn primary" id="bfTallyCombined">⇩ Export Gabungan CSV</button><button class="bfTally-btn dark" id="bfTallyCombinedPdf">📄 PDF Semua Laporan</button>
-        <button class="bfTally-btn" id="bfTallyJson">☁️ Backup Drive</button>
+        <button class="bfTally-btn primary" id="bfTallyCombined">⇩ Ekspor Gabungan CSV</button><button class="bfTally-btn dark" id="bfTallyCombinedPdf">📄 PDF Semua Laporan</button>
+        <button class="bfTally-btn" id="bfTallyJson">☁️ Cadangan Drive</button>
         <button class="bfTally-btn danger" id="bfTallyClose">✕ Tutup</button>
       </div>
     </div>
     <div class="bfTally-toolbar">
       <select id="bfTallyMode" class="bfTally-select"><option value="keluar">BARANG KELUAR</option><option value="masuk">BARANG MASUK</option></select>
-      <input id="bfTallySearch" class="bfTally-input" placeholder="Cari customer / supplier / item..." style="min-width:240px">
+      <input id="bfTallySearch" class="bfTally-input" placeholder="Cari customer / supplier / barang..." style="min-width:240px">
       <select id="bfTallyFilter" class="bfTally-select"><option value="all">Semua</option><option value="filled">Ada timbangan</option><option value="empty">Belum ditimbang</option></select>
       <div class="bfTally-kpi">
         <div class="bfTally-card"><b id="bfTallyRows">0</b><span>BARIS</span></div>
         <div class="bfTally-card"><b id="bfTallyCount">0</b><span>TITIK TIMBANG</span></div>
-        <div class="bfTally-card"><b id="bfTallyTotal">0,00 kg</b><span>TOTAL REAL</span></div>
+        <div class="bfTally-card"><b id="bfTallyTotal">0,00 kg</b><span>TOTAL TIMBANG</span></div>
         <div class="bfTally-card"><b id="bfTallyAvg">0,00 kg</b><span>RATA-RATA</span></div>
       </div>
       <span style="margin-left:auto;font-size:9px;color:#64748b">Klik setiap angka R1/R2/... untuk membuka DETAIL TIMBANGAN.</span>
@@ -101,12 +101,12 @@
   <div class="bfTally-detailbox">
     <div class="bfTally-detailhead" id="bfTallyDetailTitle">Detail Timbangan</div>
     <div class="bfTally-detailbody">
-      <div class="bfTally-field"><label>Berat Real (kg)</label><input id="bfTallyDWeight" inputmode="decimal"></div>
+      <div class="bfTally-field"><label>Berat Aktual (kg)</label><input id="bfTallyDWeight" inputmode="decimal"></div>
       <div class="bfTally-field"><label>Nomor Timbangan</label><input id="bfTallyDScale" placeholder="Timbangan 1"></div>
-      <div class="bfTally-field"><label>Operator</label><input id="bfTallyDOperator" placeholder="Nama petugas"></div>
+      <div class="bfTally-field"><label>Petugas</label><input id="bfTallyDOperator" placeholder="Nama petugas"></div>
       <div class="bfTally-field"><label>Waktu Timbang</label><input id="bfTallyDTime" type="datetime-local"></div>
-      <div class="bfTally-field"><label>Gross (kg)</label><input id="bfTallyDGross" inputmode="decimal"></div>
-      <div class="bfTally-field"><label>Tare (kg)</label><input id="bfTallyDTare" inputmode="decimal"></div>
+      <div class="bfTally-field"><label>Berat Kotor (kg)</label><input id="bfTallyDGross" inputmode="decimal"></div>
+      <div class="bfTally-field"><label>Berat Kemasan (kg)</label><input id="bfTallyDTare" inputmode="decimal"></div>
       <div class="bfTally-field full"><label>Keterangan / Kondisi / Selisih</label><textarea id="bfTallyDNote" rows="3" placeholder="Contoh: kemasan basah, timbang ulang, selisih dengan surat jalan..."></textarea></div>
     </div>
     <div class="bfTally-foot"><button class="bfTally-btn" id="bfTallyCancelDetail">Batal</button><button class="bfTally-btn primary" id="bfTallySaveDetail">Simpan Detail</button></div>
@@ -172,5 +172,6 @@
 
 
 <script id="bf-disable-legacy-pwa-cache" src="assets/js/pwa-cleanup.js?v=20260814-r12-stable-detail"></script>
+<script id="bf-ui-indonesian" src="assets/js/ui-indonesian.js?v=20260822-ui-id"></script>
 </body>
 </html>
