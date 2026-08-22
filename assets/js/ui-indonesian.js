@@ -185,7 +185,7 @@ const TECHNICAL_FAILURE=/(?:gagal|tidak dapat|belum siap|error|failed|timeout|ex
 const RAW_ENUM=/^[A-Z][A-Z0-9_]{2,}$/;
 const STATUS_CONTEXT=/(?:status|badge|state|method|metode|difference|diff|selisih|type|jenis|recon|cash|payment|pembayaran|delivery|pengantaran|classification|klasifikasi|obligation|kewajiban|payout|deposit|refund|commission|komisi|bearer|fee|penanggung)/i;
 const ERROR_CONTEXT=/(?:error|gagal|failure|message|pesan)/i;
-const UI_CONTEXT=/(?:menu|tab|toolbar|head|header|title|subtitle|label|badge|status|action|button|modal|dialog|toast|alert|empty|error|kpi|summary|filter|search|pagination|hint|instruction|notice|warning|field)/i;
+const UI_CONTEXT=/(?:menu|tab|toolbar|head|header|title|subtitle|label|badge|status|action|button|modal|dialog|toast|alert|empty|error|kpi|summary|filter|search|pagination|hint|instruction|notice|warning)/i;
 const DATA_LEAF_CONTEXT=/(?:^|[-_])(?:customer|supplier|product|item|barang|name|nama|email|phone|address|alamat|note|keterangan|description|reference|ref|amount|nominal|qty|weight|berat|date|tanggal)[-_](?:name|value|text|cell|data)(?:$|[-_])/i;
 const LABEL_TAGS=new Set(["BUTTON","LABEL","TH","LEGEND","SUMMARY","H1","H2","H3","H4","H5","H6","SMALL"]);
 const SKIP_TAGS=new Set(["SCRIPT","STYLE","CODE","PRE","TEXTAREA"]);
@@ -288,6 +288,7 @@ function statusContext(el){
 }
 function elementSignature(el){return [el?.id,typeof el?.className==="string"?el.className:"",el?.getAttribute?.("name")].filter(Boolean).join(" ")}
 function isInteractive(el){return !!el?.closest?.("button,a,[role='button']")}
+function dataLeafContext(el){return elementSignature(el).split(/\s+/).filter(Boolean).some(x=>DATA_LEAF_CONTEXT.test(x))}
 function dataContext(el){
   if(!el)return false;
   if(el.closest?.("[data-bf-ui-data],[data-bf-ui-no-translate]"))return true;
@@ -296,7 +297,7 @@ function dataContext(el){
   const header=tableHeaderContext(el);
   if(ERROR_CONTEXT.test(header))return false;
   if(el.closest?.("td")&&!statusContext(el))return true;
-  return DATA_LEAF_CONTEXT.test(elementSignature(el));
+  return dataLeafContext(el);
 }
 function labelContext(el){return !!el&&(LABEL_TAGS.has(el.tagName)||statusContext(el))}
 function presentationContext(el){
