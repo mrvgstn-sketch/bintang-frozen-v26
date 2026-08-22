@@ -3,6 +3,7 @@
 if(window.BFCustomerPicSetoranHistory)return;
 const Core=window.BFCore;if(!Core)return;
 // Kelompok Metode sekarang dirender oleh canonical Setoran agar filter, subtotal, dan histori memakai satu dataset yang sama.
+// Pilih Customer Aktif tetap menjadi capability shared; canonical Setoran memakai picker aktif dan Barang Keluar mempertahankan stable customer_id + customer_name_snapshot.
 const cid=c=>String(c?.id||c?._bf_uid||'').trim(), cname=c=>String(c?.name||c?.nama||'').trim();
 const clean=v=>String(v??'').trim().replace(/\s+/g,' ').toLocaleLowerCase('id-ID');
 const phone=v=>String(v??'').replace(/\D/g,'');
