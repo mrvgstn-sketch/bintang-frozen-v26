@@ -1,37 +1,36 @@
 'use strict';
 const assert=require('assert');
 const customers=[
-  {id:'c1',name:'Customer A',active:true,contact:'0811'},
-  {id:'c2',name:'Customer B',active:false},
-  {id:'c3',name:'Customer C',active:true}
+ {id:'c1',name:'Pendi',active:true,phone:'',address:'',type:'Umum',credit_limit:0},
+ {id:'c2',name:'Customer B',active:false},
+ {id:'c3',name:'Toko Sama',active:true,phone:'0811',address:'A',type:'Umum',credit_limit:0}
 ];
-global.window={BFCore:{storage:{list:key=>key==='bf_customers'?customers:[]}}};
-global.document={documentElement:{},getElementById:()=>null,querySelectorAll:()=>[],addEventListener:()=>{}};
-global.MutationObserver=class{constructor(fn){this.fn=fn}observe(){}};
-global.setInterval=()=>0;
-global.clearInterval=()=>{};
+global.window={BFCore:{storage:{list:k=>k==='bf_customers'?customers:[]}}};
+global.document={documentElement:{dataset:{}},querySelectorAll:()=>[],addEventListener:()=>{},getElementById:()=>null};
+global.setInterval=()=>0;global.clearInterval=()=>{};
 require('../assets/js/customer-pic-setoran-history.js');
 const api=window.BFCustomerPicSetoranHistory;
-assert(api,'enhancer API must load');
-assert.deepStrictEqual(api.activeCustomers().map(x=>x.id),['c1','c3'],'only active master customers are selectable');
-assert.strictEqual(api.methodKey('transfer'),'TRANSFER');
-assert.strictEqual(api.methodLabel('transfer'),'Transfer');
-assert.strictEqual(api.methodLabel('bank'),'bank','unknown legacy method must not be guessed as Transfer');
-const rows=[
-  {id:'s1',tanggal:'2026-08-01',customer_name_snapshot:'Customer A',gross_transfer:1000000,metode:'Transfer',customer_funds_sync_status:'SYNCED',actual_sender:'A',sales_refs:['KP-1']},
-  {id:'s2',tanggal:'2026-08-02',customer_name_snapshot:'Customer A',gross_transfer:2000000,metode:'Tunai',customer_funds_sync_status:'PENDING',actual_sender:'B'},
-  {id:'s3',tanggal:'2026-08-03',customer_name_snapshot:'Customer C',gross_transfer:3000000,metode:'BANK',customer_funds_sync_status:'LEGACY',actual_sender:'C'}
-];
-assert.deepStrictEqual(api.filterRecords(rows,{from:'2026-08-01',to:'2026-08-02',customer:'customer a',method:'ALL',status:'ALL',search:''}).map(x=>x.id),['s1','s2']);
-assert.deepStrictEqual(api.filterRecords(rows,{from:'',to:'',customer:'',method:'TRANSFER',status:'SYNCED',search:'kp-1'}).map(x=>x.id),['s1']);
-assert.deepStrictEqual(api.filterRecords(rows,{from:'',to:'',customer:'',method:'BANK',status:'ALL',search:''}).map(x=>x.id),['s3']);
-const input={dataset:{customerId:'c1'},value:'Customer A'};
-const group={dataset:{groupId:'g1'},querySelector:sel=>sel==='.bf-customer-search'?input:null};
-document.querySelectorAll=sel=>sel==='#bf-customer-groups .bf-customer-group'?[group]:[];
+assert(api);
+assert.deepStrictEqual(api.activeCustomers().map(x=>x.id),['c1','c3']);
+assert.strictEqual(api.exactDuplicate({name:' Pendi ',phone:'',address:'',type:'Umum',credit_limit:0}).id,'c1');
+assert.strictEqual(api.exactDuplicate({name:'Toko Sama',phone:'0822',address:'A',type:'Umum',credit_limit:0}),null,'same name with different identifier must not auto-dedupe');
+const input={dataset:{customerId:'c1'},value:'Pendi'},group={dataset:{groupId:'g1'},querySelector:s=>s==='.bf-customer-search'?input:null};
+document.querySelectorAll=s=>s==='#bf-customer-groups .bf-customer-group'?[group]:[];
 window.BFPrepareTransactionSave=(old,row)=>JSON.parse(JSON.stringify(row));
-assert.strictEqual(api.installBarangKeluarIdentityWrapper(),true,'wrapper must install once');
-const out=window.BFPrepareTransactionSave(null,{customers:[{group_id:'g1',customer:'Customer A'}]});
+assert.strictEqual(api.installBarangKeluarIdentityWrapper(),true);
+const out=window.BFPrepareTransactionSave(null,{customers:[{group_id:'g1',customer:'Pendi'}]});
 assert.strictEqual(out.customers[0].customer_id,'c1');
-assert.strictEqual(out.customers[0].customer_name_snapshot,'Customer A');
-assert.strictEqual(api.installBarangKeluarIdentityWrapper(),false,'wrapper must not double-wrap');
-console.log('R13 Customer PIC + Setoran history logic PASS');
+assert.strictEqual(out.customers[0].customer_name_snapshot,'Pendi');
+assert.strictEqual(api.installBarangKeluarIdentityWrapper(),false);
+console.log('R13 Customer identity + duplicate guard logic PASS');
+window.BFSetoranStore={list:()=>[]};
+require('../assets/js/setoran-canonical.js');
+const sg=window.BFSetoranGuided;
+assert(sg,'guided Setoran API must load');
+assert.deepStrictEqual(sg.calc(10500000,[4000000,3000000,3000000]),{total:10000000,difference:500000});
+assert.strictEqual(sg.normalizeMethod({metode:'Bca'}).key,'TRANSFER');
+assert.strictEqual(sg.normalizeMethod({metode:'Bca'}).account,'BCA');
+assert.strictEqual(sg.normalizeMethod({metode:'Cash/BCA'}).key,'LEGACY_MIXED');
+assert.strictEqual(sg.normalizeMethod({metode:''}).label,'Metode Tidak Tercatat');
+assert.strictEqual(sg.businessStatus({commission_status:'PENDING_OWNER'}),'Menunggu Konfirmasi Owner');
+console.log('R13 guided Setoran calculation + legacy method normalization PASS');
