@@ -49,4 +49,8 @@ function fakeSelect(id){return {tagName:'SELECT',id,className:'',getAttribute(){
 assert.strictEqual(ui.statusContext({tagName:'OPTION',parentElement:fakeSelect('cf-diff')}),true,'difference-type options must be treated as status presentation');
 assert.strictEqual(ui.statusContext({tagName:'OPTION',parentElement:fakeSelect('product-select')}),false,'ordinary product options must not be treated as raw status enums');
 
-console.log('UI Indonesian runtime presentation tests: 21 passed');
+function fakeTableLeaf(tagName='SPAN',interactive=false){return {tagName,id:'',className:'',parentElement:null,getAttribute(){return null},closest(sel){if(sel==='[data-bf-ui-data],[data-bf-ui-no-translate]')return null;if(sel==="button,a,[role='button']")return interactive?this:null;if(sel==='td,th')return null;if(sel==='td')return {};return null}}}
+assert.strictEqual(ui.dataContext(fakeTableLeaf('SPAN',false)),true,'ordinary table-cell text must be protected as business data');
+assert.strictEqual(ui.dataContext(fakeTableLeaf('BUTTON',true)),false,'interactive table actions must remain UI presentation, not business data');
+
+console.log('UI Indonesian runtime presentation tests: 23 passed');
