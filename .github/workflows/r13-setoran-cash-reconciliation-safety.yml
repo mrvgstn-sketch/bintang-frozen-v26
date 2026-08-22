@@ -73,6 +73,19 @@ jobs:
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220060_r13_customer_funds_foundation.sql
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220070_r13_customer_funds_lifecycle.sql
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608221000_r13_setoran_commission_guided.sql
+      - name: Prepare existing cloud-state source fixture
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres <<'SQL'
+          create table if not exists public.bf_state_items(
+            store_code text not null,
+            state_key text not null,
+            value text not null,
+            revision bigint not null default 1,
+            updated_at timestamptz not null default now(),
+            updated_by uuid,
+            primary key(store_code,state_key)
+          );
+          SQL
       - name: Apply integrated migration
         run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
       - name: Run split Setoran and daily cash tests
