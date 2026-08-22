@@ -34,8 +34,10 @@ jobs:
           grep -q "Customer Setoran is intentionally NOT included as cash-in" supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
           grep -q "bf_cf_submit_setoran_flow" supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
           grep -q "return public.bf_cf_submit_setoran" supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
+          grep -q "revoke all on function public.bf_cf_submit_setoran" supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql
+          grep -q "grant execute on function public.bf_cash_submit_reconciliation" supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql
       - name: Source snapshot
-        run: sha256sum assets/js/menu.js assets/js/setoran-canonical-split.js assets/js/cash-reconciliation.js supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql tests/r13-setoran-cash-reconciliation.sql
+        run: sha256sum assets/js/menu.js assets/js/setoran-canonical-split.js assets/js/cash-reconciliation.js supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql tests/r13-setoran-cash-reconciliation.sql
 
   postgres-integration:
     name: PostgreSQL split and cash lifecycle
@@ -86,13 +88,22 @@ jobs:
             primary key(store_code,state_key)
           );
           SQL
-      - name: Apply integrated migration
-        run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
+      - name: Apply integrated migrations
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql
+      - name: Verify explicit RPC privileges
+        run: |
+          psql -At -h localhost -U postgres -d postgres -c "select has_function_privilege('public','public.bf_cf_submit_setoran(uuid,text,text,numeric,date,jsonb,jsonb,boolean,text,text)','EXECUTE');" | grep -qx 'f'
+          psql -At -h localhost -U postgres -d postgres -c "select has_function_privilege('authenticated','public.bf_cf_submit_setoran(uuid,text,text,numeric,date,jsonb,jsonb,boolean,text,text)','EXECUTE');" | grep -qx 't'
+          psql -At -h localhost -U postgres -d postgres -c "select has_function_privilege('public','public.bf_cash_submit_reconciliation(date,text,numeric,numeric,numeric,numeric,numeric,numeric,numeric,text,bigint)','EXECUTE');" | grep -qx 'f'
+          psql -At -h localhost -U postgres -d postgres -c "select has_function_privilege('authenticated','public.bf_cash_submit_reconciliation(date,text,numeric,numeric,numeric,numeric,numeric,numeric,numeric,text,bigint)','EXECUTE');" | grep -qx 't'
       - name: Run split Setoran and daily cash tests
         working-directory: tests
         run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f r13-setoran-cash-reconciliation.sql
       - name: Migration replay idempotency
         run: |
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608230010_r13_setoran_cash_reconciliation.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608230020_r13_setoran_cash_reconciliation_acl.sql
           psql -At -h localhost -U postgres -d postgres -c "select count(*)=1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='bf_cf_submit_setoran';" | grep -qx 't'
           psql -At -h localhost -U postgres -d postgres -c "select count(*)=1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='bf_cash_submit_reconciliation';" | grep -qx 't'
