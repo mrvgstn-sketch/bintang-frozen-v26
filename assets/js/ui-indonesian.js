@@ -180,11 +180,15 @@ const SENTENCES=new Map(Object.entries({
 }));
 
 const TECHNICAL=/\b(?:SQL|RPC|Supabase|backend|schema|migration|payload|constraint|stack(?:\s+trace)?|R13[A-Z0-9-]*|ACK|timestamp|flag\s+Online|Postgres|PostgreSQL|database enum|internal id)\b/i;
+const TECHNICAL_DETAIL=/(?:row[- ]level security|security policy|duplicate key|unique constraint|foreign key|null value|invalid input syntax|relation .+ does not exist|column .+ does not exist|function .+ does not exist|permission denied|not authorized|unauthorized|forbidden|JWT|access token|refresh token|storage bucket|failed to fetch|network error|OAuth|provider error|PGRST\d+)/i;
 const TECHNICAL_FAILURE=/(?:gagal|tidak dapat|belum siap|error|failed|timeout|exception|violat|not found|denied|unauthorized|forbidden)/i;
 const RAW_ENUM=/^[A-Z][A-Z0-9_]{2,}$/;
 const STATUS_CONTEXT=/(?:status|badge|state|method|metode|difference|diff|selisih|type|jenis|recon|cash|payment|pembayaran|delivery|pengantaran|classification|klasifikasi|obligation|kewajiban|payout|deposit|refund|commission|komisi|bearer|fee|penanggung)/i;
-const LABEL_TAGS=new Set(["BUTTON","LABEL","TH","LEGEND","SUMMARY","H1","H2","H3","H4","H5","H6"]);
-const SKIP_TAGS=new Set(["SCRIPT","STYLE","CODE","PRE"]);
+const ERROR_CONTEXT=/(?:error|gagal|failure|message|pesan)/i;
+const UI_CONTEXT=/(?:menu|tab|toolbar|head|header|title|subtitle|label|badge|status|action|button|modal|dialog|toast|alert|empty|error|kpi|summary|filter|search|pagination|hint|instruction|notice|warning)/i;
+const DATA_LEAF_CONTEXT=/(?:^|[-_])(?:customer|supplier|product|item|barang|name|nama|email|phone|address|alamat|note|keterangan|description|reference|ref|amount|nominal|qty|weight|berat|date|tanggal)[-_](?:name|value|text|cell|data)(?:$|[-_])/i;
+const LABEL_TAGS=new Set(["BUTTON","LABEL","TH","LEGEND","SUMMARY","H1","H2","H3","H4","H5","H6","SMALL"]);
+const SKIP_TAGS=new Set(["SCRIPT","STYLE","CODE","PRE","TEXTAREA"]);
 const ATTRS=["placeholder","title","aria-label"];
 
 function preserveWhitespace(original,translated){
@@ -192,10 +196,10 @@ function preserveWhitespace(original,translated){
   return left+translated+right;
 }
 function coreText(value){return String(value??"").trim()}
-function lookupDisplay(core){return DISPLAY.get(core)??SENTENCES.get(core)}
-function exact(value){
+function mappedText(core,uiContext){return SENTENCES.get(core)??(uiContext?DISPLAY.get(core):undefined)}
+function exact(value,uiContext=false){
   const raw=String(value??""),core=coreText(raw);if(!core)return raw;
-  const mapped=lookupDisplay(core);return mapped===undefined?raw:preserveWhitespace(raw,mapped);
+  const mapped=mappedText(core,uiContext);return mapped===undefined?raw:preserveWhitespace(raw,mapped);
 }
 function statusLabel(value){
   const raw=String(value??""),core=coreText(raw);if(!core)return raw;
@@ -207,46 +211,45 @@ function statusLabel(value){
 function technicalError(value){
   const raw=coreText(value);
   if(!raw)return "Terjadi kendala. Coba lagi. Jika masalah berlanjut, hubungi Admin.";
-  if(TECHNICAL.test(raw)||/^[A-Z][A-Z0-9_]{3,}$/.test(raw)||/\b(?:23505|23503|42501|PGRST\d+)\b/.test(raw)){
+  if(TECHNICAL.test(raw)||TECHNICAL_DETAIL.test(raw)||/^[A-Z][A-Z0-9_]{3,}$/.test(raw)||/\b(?:23505|23503|42501|PGRST\d+)\b/.test(raw)){
     return "Data belum dapat diproses. Coba lagi. Jika masalah berlanjut, hubungi Admin.";
   }
-  return translatePattern(raw,false);
+  return translatePattern(raw,true);
 }
-function translatePattern(value,labelContext=false){
+function translatePattern(value,uiContext=false){
   const original=String(value??"");
-  let core=coreText(exact(original));if(!core)return original;
+  let core=coreText(exact(original,uiContext));if(!core)return original;
   if(/^Login Google gagal:/i.test(core))core=core.replace(/^Login Google gagal:/i,"Gagal masuk dengan Google:");
   if(/^Logout gagal:/i.test(core))core=core.replace(/^Logout gagal:/i,"Gagal keluar:");
   if(/^Upload foto nota gagal:/i.test(core))core=core.replace(/^Upload foto nota gagal:/i,"Foto nota gagal diunggah:");
   if(/^Safe Delete menolak transaksi ini karena state sensitif:/i.test(core))core=core.replace(/^Safe Delete menolak transaksi ini karena state sensitif:/i,"Transaksi tidak dapat dihapus karena sudah memiliki proses penting yang tercatat:");
-  core=core
-    .replace(/\bDelivery Proof\b/g,"Bukti Pengantaran")
-    .replace(/\bDelivered\b/g,"Pengantaran Selesai")
-    .replace(/\bCash carried\b/g,"Uang Tunai Dibawa Supir")
-    .replace(/\bCash handed_over\b/g,"Uang Tunai Sudah Diserahkan")
-    .replace(/\bfresh GPS\b/gi,"lokasi GPS terbaru")
-    .replace(/\bretry\b/gi,"coba lagi")
-    .replace(/\bCustomer History\b/g,"Riwayat Customer")
-    .replace(/\bReversal\b/g,"Pembatalan")
-    .replace(/\bOwner-only\b/gi,"khusus Owner")
-    .replace(/\bmaker-checker\b/gi,"pemeriksaan berjenjang")
-    .replace(/\bPayment Method\b/g,"Metode Pembayaran")
-    .replace(/\bCash Status\b/g,"Status Uang Tunai")
-    .replace(/\bCustomer Pickup\b/g,"Diambil Customer")
-    .replace(/\bUpdate Server\b/g,"Terakhir Diperbarui")
-    .replace(/\bNon-Tunai \(Legacy\)\b/g,"Non-Tunai (Catatan Lama)")
-    .replace(/\bPreview\b/g,"Pratinjau")
-    .replace(/\bUpload\b/g,"Unggah")
-    .replace(/\bDownload\b/g,"Unduh")
-    .replace(/\bRestore\b/g,"Pulihkan")
-    .replace(/\bBackup\b/g,"Cadangan")
-    .replace(/\bExport\b/g,"Ekspor")
-    .replace(/\bOutstanding\b/g,"Belum Diselesaikan")
-    .replace(/\bPending Owner\b/g,"Menunggu Owner")
-    .replace(/\bPending\b/g,"Menunggu")
-    .replace(/\bCorrection\b/g,"Koreksi");
-  if(labelContext){
+  if(uiContext){
     core=core
+      .replace(/\bDelivery Proof\b/g,"Bukti Pengantaran")
+      .replace(/\bDelivered\b/g,"Pengantaran Selesai")
+      .replace(/\bCash carried\b/g,"Uang Tunai Dibawa Supir")
+      .replace(/\bCash handed_over\b/g,"Uang Tunai Sudah Diserahkan")
+      .replace(/\bfresh GPS\b/gi,"lokasi GPS terbaru")
+      .replace(/\bretry\b/gi,"coba lagi")
+      .replace(/\bCustomer History\b/g,"Riwayat Customer")
+      .replace(/\bReversal\b/g,"Pembatalan")
+      .replace(/\bOwner-only\b/gi,"khusus Owner")
+      .replace(/\bmaker-checker\b/gi,"pemeriksaan berjenjang")
+      .replace(/\bPayment Method\b/g,"Metode Pembayaran")
+      .replace(/\bCash Status\b/g,"Status Uang Tunai")
+      .replace(/\bCustomer Pickup\b/g,"Diambil Customer")
+      .replace(/\bUpdate Server\b/g,"Terakhir Diperbarui")
+      .replace(/\bNon-Tunai \(Legacy\)\b/g,"Non-Tunai (Catatan Lama)")
+      .replace(/\bPreview\b/g,"Pratinjau")
+      .replace(/\bUpload\b/g,"Unggah")
+      .replace(/\bDownload\b/g,"Unduh")
+      .replace(/\bRestore\b/g,"Pulihkan")
+      .replace(/\bBackup\b/g,"Cadangan")
+      .replace(/\bExport\b/g,"Ekspor")
+      .replace(/\bOutstanding\b/g,"Belum Diselesaikan")
+      .replace(/\bPending Owner\b/g,"Menunggu Owner")
+      .replace(/\bPending\b/g,"Menunggu")
+      .replace(/\bCorrection\b/g,"Koreksi")
       .replace(/^Item$/i,"Barang")
       .replace(/^Qty$/i,"Jumlah")
       .replace(/^Case$/i,"Referensi")
@@ -255,7 +258,7 @@ function translatePattern(value,labelContext=false){
       .replace(/^Actual$/i,"Dana Diterima")
       .replace(/^Gross$/i,"Nilai Setoran");
   }
-  if(TECHNICAL.test(core)&&TECHNICAL_FAILURE.test(core))core="Data belum dapat diproses. Coba lagi. Jika masalah berlanjut, hubungi Admin.";
+  if((TECHNICAL.test(core)&&TECHNICAL_FAILURE.test(core))||TECHNICAL_DETAIL.test(core))core="Data belum dapat diproses. Coba lagi. Jika masalah berlanjut, hubungi Admin.";
   return preserveWhitespace(original,core);
 }
 function tableHeaderContext(el){
@@ -283,7 +286,27 @@ function statusContext(el){
   const ctx=fieldContext(el);
   return !!ctx&&STATUS_CONTEXT.test(ctx);
 }
-function labelContext(el){return !!el&&(LABEL_TAGS.has(el.tagName)||el.tagName==="OPTION"||statusContext(el))}
+function elementSignature(el){return [el?.id,typeof el?.className==="string"?el.className:"",el?.getAttribute?.("name")].filter(Boolean).join(" ")}
+function isInteractive(el){return !!el?.closest?.("button,a,[role='button']")}
+function dataLeafContext(el){return elementSignature(el).split(/\s+/).filter(Boolean).some(x=>DATA_LEAF_CONTEXT.test(x))}
+function dataContext(el){
+  if(!el)return false;
+  if(el.closest?.("[data-bf-ui-data],[data-bf-ui-no-translate]"))return true;
+  if(isInteractive(el))return false;
+  if(el.tagName==="OPTION"&&!statusContext(el))return true;
+  const header=tableHeaderContext(el);
+  if(ERROR_CONTEXT.test(header))return false;
+  if(el.closest?.("td")&&!statusContext(el))return true;
+  return dataLeafContext(el);
+}
+function labelContext(el){return !!el&&(LABEL_TAGS.has(el.tagName)||statusContext(el))}
+function presentationContext(el){
+  if(!el||dataContext(el))return false;
+  if(labelContext(el)||isInteractive(el))return true;
+  let cur=el;
+  for(let i=0;i<3&&cur;i++,cur=cur.parentElement){if(UI_CONTEXT.test(elementSignature(cur)))return true}
+  return false;
+}
 function translate(value){return translatePattern(value,false)}
 function shouldTranslateTextNode(node){
   const p=node?.parentElement;if(!p||SKIP_TAGS.has(p.tagName))return false;
@@ -294,7 +317,8 @@ function translateNode(node){
   if(node.nodeType===Node.TEXT_NODE){
     if(!shouldTranslateTextNode(node))return;
     const parent=node.parentElement;
-    const next=statusContext(parent)?statusLabel(node.nodeValue):translatePattern(node.nodeValue,labelContext(parent));
+    if(dataContext(parent))return;
+    const next=statusContext(parent)?statusLabel(node.nodeValue):translatePattern(node.nodeValue,presentationContext(parent));
     if(next!==node.nodeValue)node.nodeValue=next;
     return;
   }
@@ -344,6 +368,8 @@ window.BFUIIndonesian={
   statusMap:STATUS,
   statusLabel,
   technicalError,
-  statusContext
+  statusContext,
+  dataContext,
+  presentationContext
 };
 })();

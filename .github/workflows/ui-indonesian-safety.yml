@@ -35,13 +35,15 @@ jobs:
           grep -q "bf_driver_mark_delivered_geo" assets/js/driver-delivery.js
           grep -q 'return \["cash","transfer","qris","credit","non_cash"\]' assets/js/data-model.js
           grep -q "MutationObserver" assets/js/ui-indonesian.js
+          grep -q "dataContext" assets/js/ui-indonesian.js
+          grep -q "presentationContext" assets/js/ui-indonesian.js
       - name: Canonical user-facing leakage guards
         run: |
           ! grep -E "Live Driver Location|Owner-only|Customer Pickup|Safe Delete menolak|Non-Tunai \(Legacy\)" assets/js/menu.js assets/js/owner-control.js assets/js/driver-location.js assets/js/driver-delivery.js assets/js/data-model.js
           ! grep -E "Pastikan SQL R13O|Pastikan SQL R13O dan R13N|Supabase belum siap" assets/js/driver-location.js assets/js/driver-delivery.js
       - name: Asset-version guards
         run: |
-          grep -q "ui-indonesian.js?v=20260822-runtime-id2" index.html
+          grep -q "ui-indonesian.js?v=20260823-runtime-id3" index.html
           grep -q "data-model.js?v=20260822-runtime-id2" index.html
           grep -q "driver-location.js?v=20260822-runtime-id2" index.html
           grep -q "driver-delivery.js?v=20260822-runtime-id2" index.html
