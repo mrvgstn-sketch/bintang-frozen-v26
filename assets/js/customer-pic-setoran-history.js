@@ -2,6 +2,7 @@
 'use strict';
 if(window.BFCustomerPicSetoranHistory)return;
 const Core=window.BFCore;if(!Core)return;
+// Kelompok Metode sekarang dirender oleh canonical Setoran agar filter, subtotal, dan histori memakai satu dataset yang sama.
 const cid=c=>String(c?.id||c?._bf_uid||'').trim(), cname=c=>String(c?.name||c?.nama||'').trim();
 const clean=v=>String(v??'').trim().replace(/\s+/g,' ').toLocaleLowerCase('id-ID');
 const phone=v=>String(v??'').replace(/\D/g,'');
