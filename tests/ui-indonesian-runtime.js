@@ -34,12 +34,19 @@ assert.strictEqual(ui.statusLabel('ABC_DEF'),'Status belum dikenali','unknown ra
 const tech=ui.technicalError('SQL R13O failed in Supabase: constraint 23505');
 assert.strictEqual(tech,'Data belum dapat diproses. Coba lagi. Jika masalah berlanjut, hubungi Admin.');
 assert(!/SQL|R13O|Supabase|constraint|23505/i.test(tech),'technical implementation details must not leak');
+const rls=ui.technicalError('new row violates row-level security policy for table bf_customer_funds');
+assert.strictEqual(rls,'Data belum dapat diproses. Coba lagi. Jika masalah berlanjut, hubungi Admin.','backend policy errors must not leak');
 assert.strictEqual(ui.translatePattern('Dashboard',true),'Ringkasan');
+assert.strictEqual(ui.translatePattern('Dashboard',false),'Dashboard','business data equal to a UI label must stay untouched outside UI context');
 assert.strictEqual(ui.translatePattern('Item',false),'Item','business data outside label context must be preserved');
 assert.strictEqual(ui.translatePattern('Item',true),'Barang');
+assert.strictEqual(ui.translatePattern('Export Jaya',false),'Export Jaya','customer/product text containing Export must remain unchanged');
+assert.strictEqual(ui.translatePattern('Pending Food',false),'Pending Food','business text containing Pending must remain unchanged');
+assert.strictEqual(ui.translatePattern('Backup Supplier',false),'Backup Supplier','business text containing Backup must remain unchanged');
+assert.strictEqual(ui.translatePattern('Export PDF / CSV',true),'Ekspor PDF / CSV','UI labels still translate in presentation context');
 
 function fakeSelect(id){return {tagName:'SELECT',id,className:'',getAttribute(){return null},closest(){return null}}}
 assert.strictEqual(ui.statusContext({tagName:'OPTION',parentElement:fakeSelect('cf-diff')}),true,'difference-type options must be treated as status presentation');
 assert.strictEqual(ui.statusContext({tagName:'OPTION',parentElement:fakeSelect('product-select')}),false,'ordinary product options must not be treated as raw status enums');
 
-console.log('UI Indonesian runtime presentation tests: 15 passed');
+console.log('UI Indonesian runtime presentation tests: 21 passed');
