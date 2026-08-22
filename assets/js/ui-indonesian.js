@@ -184,8 +184,9 @@ const TECHNICAL_DETAIL=/(?:row[- ]level security|security policy|duplicate key|u
 const TECHNICAL_FAILURE=/(?:gagal|tidak dapat|belum siap|error|failed|timeout|exception|violat|not found|denied|unauthorized|forbidden)/i;
 const RAW_ENUM=/^[A-Z][A-Z0-9_]{2,}$/;
 const STATUS_CONTEXT=/(?:status|badge|state|method|metode|difference|diff|selisih|type|jenis|recon|cash|payment|pembayaran|delivery|pengantaran|classification|klasifikasi|obligation|kewajiban|payout|deposit|refund|commission|komisi|bearer|fee|penanggung)/i;
+const ERROR_CONTEXT=/(?:error|gagal|failure|message|pesan)/i;
 const UI_CONTEXT=/(?:menu|tab|toolbar|head|header|title|subtitle|label|badge|status|action|button|modal|dialog|toast|alert|empty|error|kpi|summary|filter|search|pagination|hint|instruction|notice|warning|field)/i;
-const DATA_LEAF_CONTEXT=/(?:customer|supplier|product|item|barang|name|nama|email|phone|address|alamat|note|keterangan|description|reference|ref|amount|nominal|qty|weight|berat|date|tanggal)[-_](?:name|value|text|cell|data)$/i;
+const DATA_LEAF_CONTEXT=/(?:^|[-_])(?:customer|supplier|product|item|barang|name|nama|email|phone|address|alamat|note|keterangan|description|reference|ref|amount|nominal|qty|weight|berat|date|tanggal)[-_](?:name|value|text|cell|data)(?:$|[-_])/i;
 const LABEL_TAGS=new Set(["BUTTON","LABEL","TH","LEGEND","SUMMARY","H1","H2","H3","H4","H5","H6","SMALL"]);
 const SKIP_TAGS=new Set(["SCRIPT","STYLE","CODE","PRE","TEXTAREA"]);
 const ATTRS=["placeholder","title","aria-label"];
@@ -286,17 +287,21 @@ function statusContext(el){
   return !!ctx&&STATUS_CONTEXT.test(ctx);
 }
 function elementSignature(el){return [el?.id,typeof el?.className==="string"?el.className:"",el?.getAttribute?.("name")].filter(Boolean).join(" ")}
+function isInteractive(el){return !!el?.closest?.("button,a,[role='button']")}
 function dataContext(el){
   if(!el)return false;
   if(el.closest?.("[data-bf-ui-data],[data-bf-ui-no-translate]"))return true;
+  if(isInteractive(el))return false;
   if(el.tagName==="OPTION"&&!statusContext(el))return true;
+  const header=tableHeaderContext(el);
+  if(ERROR_CONTEXT.test(header))return false;
   if(el.closest?.("td")&&!statusContext(el))return true;
   return DATA_LEAF_CONTEXT.test(elementSignature(el));
 }
 function labelContext(el){return !!el&&(LABEL_TAGS.has(el.tagName)||statusContext(el))}
 function presentationContext(el){
   if(!el||dataContext(el))return false;
-  if(labelContext(el))return true;
+  if(labelContext(el)||isInteractive(el))return true;
   let cur=el;
   for(let i=0;i<3&&cur;i++,cur=cur.parentElement){if(UI_CONTEXT.test(elementSignature(cur)))return true}
   return false;
