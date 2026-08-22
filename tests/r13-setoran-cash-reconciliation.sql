@@ -31,49 +31,48 @@ select public.r13_cash_assert((select reconciliation_status='REVERSED' from publ
 select public.bf_cf_cancel_setoran('SET-SPLIT-001','retry reversal',null);
 select public.r13_cash_assert((select count(*)=1 from public.bf_customer_fund_cases where source_setoran_id='SET-SPLIT-001'),'reversal retry does not duplicate case');
 
--- Daily cash reconciliation: expense is server-derived from bf_expenses.
--- A Customer Setoran case exists above, but no Customer Setoran amount is read by
--- the daily cash formula. The expected-cash assertion proves this boundary.
+-- Daily cash reconciliation uses isolated dates because the existing Nota harness
+-- already owns current_date and leaves it VERIFIED by design.
 reset role;
 insert into public.bf_state_items(store_code,state_key,value,revision)
 values('BINTANG-Y70M','bf_expenses',jsonb_build_array(
-  jsonb_build_object('id','EXP-001','tanggal',current_date::text,'kategori','BBM','nominal',100000,'keterangan','Test tunai'),
-  jsonb_build_object('id','EXP-DEL','tanggal',current_date::text,'kategori','Hapus','nominal',50000,'deleted_at',now()::text),
-  jsonb_build_object('id','EXP-OLD','tanggal',(current_date-1)::text,'kategori','Kemarin','nominal',90000)
+  jsonb_build_object('id','EXP-001','tanggal',(current_date+7)::text,'kategori','BBM','nominal',100000,'keterangan','Test tunai'),
+  jsonb_build_object('id','EXP-DEL','tanggal',(current_date+7)::text,'kategori','Hapus','nominal',50000,'deleted_at',now()::text),
+  jsonb_build_object('id','EXP-OLD','tanggal',(current_date+6)::text,'kategori','Hari lain','nominal',90000)
 )::text,7)
 on conflict(store_code,state_key) do update set value=excluded.value,revision=excluded.revision;
 
 set role authenticated;
 select set_config('request.jwt.claim.sub','22222222-2222-2222-2222-222222222222',false);
-select public.bf_cash_get_expense_snapshot(current_date,'BINTANG-Y70M') as exp_snapshot \gset
+select public.bf_cash_get_expense_snapshot(current_date+7,'BINTANG-Y70M') as exp_snapshot \gset
 select public.r13_cash_assert((:'exp_snapshot'::jsonb->>'total')::numeric=100000,'expense snapshot excludes deleted/other dates');
 select public.r13_cash_assert(jsonb_array_length(:'exp_snapshot'::jsonb->'items')=1,'expense snapshot keeps traceable source item');
-select (public.bf_cash_submit_reconciliation(current_date,'BINTANG-Y70M',500000,1000000,0,0,0,0,1300000,'Admin submit',null)).id as recon_id \gset
+select (public.bf_cash_submit_reconciliation(current_date+7,'BINTANG-Y70M',500000,1000000,0,0,0,0,1300000,'Admin submit',null)).id as recon_id \gset
 select revision as recon_rev from public.bf_cash_reconciliations where id=:'recon_id'::uuid \gset
 select public.r13_cash_assert((select status='SUBMITTED' and expense_total_snapshot=100000 and expected_cash=1400000 and physical_cash=1300000 and difference=-100000 and verified_by is null from public.bf_cash_reconciliations where id=:'recon_id'::uuid),'admin submits server-derived reconciliation and Customer Setoran does not become cash-in');
 select public.r13_cash_assert((select expense_source_revision=7 and jsonb_array_length(expense_source_items)=1 from public.bf_cash_reconciliations where id=:'recon_id'::uuid),'reconciliation stores expense source revision and references');
 select public.r13_expect_admin_review_denied(:'recon_id'::uuid,:'recon_rev'::bigint);
 
-select public.bf_cash_submit_reconciliation(current_date,'BINTANG-Y70M',500000,1000000,0,0,0,0,1300000,'Admin resubmit',:'recon_rev'::bigint) as resubmit \gset
+select public.bf_cash_submit_reconciliation(current_date+7,'BINTANG-Y70M',500000,1000000,0,0,0,0,1300000,'Admin resubmit',:'recon_rev'::bigint) as resubmit \gset
 select revision as recon_rev2 from public.bf_cash_reconciliations where id=:'recon_id'::uuid \gset
-select public.r13_expect_stale_submit(current_date,:'recon_rev'::bigint);
+select public.r13_expect_stale_submit(current_date+7,:'recon_rev'::bigint);
 
 reset role;
 set role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111',false);
 select public.bf_cash_review_reconciliation(:'recon_id'::uuid,'APPROVE','Sudah diperiksa',:'recon_rev2'::bigint);
 select public.r13_cash_assert((select status='VERIFIED' and verified_by='11111111-1111-1111-1111-111111111111'::uuid from public.bf_cash_reconciliations where id=:'recon_id'::uuid),'Owner final approval');
-select public.r13_expect_final_lock(current_date);
+select public.r13_expect_final_lock(current_date+7);
 
 -- Legacy RPC ignores the old manual expense argument and delegates to the canonical writer.
 reset role;
 insert into public.bf_state_items(store_code,state_key,value,revision)
-values('BINTANG-Y70M','bf_expenses',jsonb_build_array(jsonb_build_object('id','EXP-LEGACY','tanggal',(current_date+1)::text,'kategori','Legacy day','nominal',200000))::text,8)
+values('BINTANG-Y70M','bf_expenses',jsonb_build_array(jsonb_build_object('id','EXP-LEGACY','tanggal',(current_date+8)::text,'kategori','Legacy day','nominal',200000))::text,8)
 on conflict(store_code,state_key) do update set value=excluded.value,revision=excluded.revision;
 set role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111',false);
-select public.bf_cf_reconcile_cash_day(current_date+1,0,1000000,0,0,9999999,0,0,800000,'legacy delegate');
-select public.r13_cash_assert((select expense_total_snapshot=200000 and status='VERIFIED' from public.bf_cash_reconciliations where reconciliation_date=current_date+1),'legacy RPC delegates and ignores manual expense');
+select public.bf_cf_reconcile_cash_day(current_date+8,0,1000000,0,0,9999999,0,0,800000,'legacy delegate');
+select public.r13_cash_assert((select expense_total_snapshot=200000 and status='VERIFIED' from public.bf_cash_reconciliations where reconciliation_date=current_date+8),'legacy RPC delegates and ignores manual expense');
 
 reset role;
 select 'R13 Setoran + Daily Cash Reconciliation PostgreSQL harness PASS' result;
