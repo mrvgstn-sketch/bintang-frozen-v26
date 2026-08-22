@@ -182,8 +182,8 @@ const SENTENCES=new Map(Object.entries({
 const TECHNICAL=/\b(?:SQL|RPC|Supabase|backend|schema|migration|payload|constraint|stack(?:\s+trace)?|R13[A-Z0-9-]*|ACK|timestamp|flag\s+Online|Postgres|PostgreSQL|database enum|internal id)\b/i;
 const TECHNICAL_FAILURE=/(?:gagal|tidak dapat|belum siap|error|failed|timeout|exception|violat|not found|denied|unauthorized|forbidden)/i;
 const RAW_ENUM=/^[A-Z][A-Z0-9_]{2,}$/;
-const STATUS_CONTEXT=/(?:status|badge|state|method|metode|difference|selisih|type|jenis|recon|cash|payment|pembayaran|delivery|pengantaran|classification|klasifikasi|obligation|kewajiban|payout|deposit|refund|commission|komisi)/i;
-const LABEL_TAGS=new Set(["BUTTON","LABEL","TH","OPTION","LEGEND","SUMMARY","H1","H2","H3","H4","H5","H6"]);
+const STATUS_CONTEXT=/(?:status|badge|state|method|metode|difference|diff|selisih|type|jenis|recon|cash|payment|pembayaran|delivery|pengantaran|classification|klasifikasi|obligation|kewajiban|payout|deposit|refund|commission|komisi|bearer|fee|penanggung)/i;
+const LABEL_TAGS=new Set(["BUTTON","LABEL","TH","LEGEND","SUMMARY","H1","H2","H3","H4","H5","H6"]);
 const SKIP_TAGS=new Set(["SCRIPT","STYLE","CODE","PRE"]);
 const ATTRS=["placeholder","title","aria-label"];
 
@@ -258,12 +258,32 @@ function translatePattern(value,labelContext=false){
   if(TECHNICAL.test(core)&&TECHNICAL_FAILURE.test(core))core="Data belum dapat diproses. Coba lagi. Jika masalah berlanjut, hubungi Admin.";
   return preserveWhitespace(original,core);
 }
-function statusContext(el){
-  if(!el)return false;
-  if(el.tagName==="OPTION")return true;
-  return STATUS_CONTEXT.test([el.id,typeof el.className==="string"?el.className:"",el.getAttribute?.("name"),el.getAttribute?.("data-status"),el.getAttribute?.("data-state")].filter(Boolean).join(" "));
+function tableHeaderContext(el){
+  const cell=el?.closest?.("td,th");
+  if(!cell||cell.tagName==="TH")return "";
+  const row=cell.parentElement;
+  const index=row?.children?Array.prototype.indexOf.call(row.children,cell):-1;
+  if(index<0)return "";
+  const table=cell.closest?.("table");
+  const headerRows=table?.tHead?.rows;
+  const headerRow=headerRows?.length?headerRows[headerRows.length-1]:null;
+  return coreText(headerRow?.cells?.[index]?.textContent||"");
 }
-function labelContext(el){return !!el&&(LABEL_TAGS.has(el.tagName)||statusContext(el))}
+function fieldContext(el){
+  if(!el)return "";
+  const target=el.tagName==="OPTION"?el.parentElement:el;
+  const own=[target?.id,typeof target?.className==="string"?target.className:"",target?.getAttribute?.("name"),target?.getAttribute?.("data-status"),target?.getAttribute?.("data-state")].filter(Boolean).join(" ");
+  if(STATUS_CONTEXT.test(own))return own;
+  const field=target?.closest?.(".cf-form,.nt-form,.cs-field,.bf-field,.form-group");
+  const label=coreText(field?.querySelector?.("label")?.textContent||"");
+  if(STATUS_CONTEXT.test(label))return label;
+  return tableHeaderContext(target);
+}
+function statusContext(el){
+  const ctx=fieldContext(el);
+  return !!ctx&&STATUS_CONTEXT.test(ctx);
+}
+function labelContext(el){return !!el&&(LABEL_TAGS.has(el.tagName)||el.tagName==="OPTION"||statusContext(el))}
 function translate(value){return translatePattern(value,false)}
 function shouldTranslateTextNode(node){
   const p=node?.parentElement;if(!p||SKIP_TAGS.has(p.tagName))return false;
@@ -323,6 +343,7 @@ window.BFUIIndonesian={
   exactMap:DISPLAY,
   statusMap:STATUS,
   statusLabel,
-  technicalError
+  technicalError,
+  statusContext
 };
 })();
