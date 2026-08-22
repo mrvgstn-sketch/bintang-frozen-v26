@@ -52,5 +52,7 @@ assert.strictEqual(ui.statusContext({tagName:'OPTION',parentElement:fakeSelect('
 function fakeTableLeaf(tagName='SPAN',interactive=false){return {tagName,id:'',className:'',parentElement:null,getAttribute(){return null},closest(sel){if(sel==='[data-bf-ui-data],[data-bf-ui-no-translate]')return null;if(sel==="button,a,[role='button']")return interactive?this:null;if(sel==='td,th')return null;if(sel==='td')return {};return null}}}
 assert.strictEqual(ui.dataContext(fakeTableLeaf('SPAN',false)),true,'ordinary table-cell text must be protected as business data');
 assert.strictEqual(ui.dataContext(fakeTableLeaf('BUTTON',true)),false,'interactive table actions must remain UI presentation, not business data');
+const namedData={tagName:'SPAN',id:'',className:'bf-customer-name text-sm',parentElement:null,getAttribute(){return null},closest(){return null}};
+assert.strictEqual(ui.dataContext(namedData),true,'prefixed multi-class customer-name nodes must be protected as business data');
 
-console.log('UI Indonesian runtime presentation tests: 23 passed');
+console.log('UI Indonesian runtime presentation tests: 24 passed');
