@@ -26,7 +26,7 @@ function supplierGroups(row={}){
   return [];
 }
 function paymentMethod(value){const v=str(value).toLowerCase();return ["cash","transfer","qris","credit","non_cash"].includes(v)?v:"unknown"}
-function paymentLabel(value){const v=paymentMethod(value);return v==="cash"?"Tunai":v==="transfer"?"Transfer":v==="qris"?"QRIS":v==="credit"?"Piutang":v==="non_cash"?"Non-Tunai (Legacy)":"Belum Tercatat"}
+function paymentLabel(value){const v=paymentMethod(value);return v==="cash"?"Tunai":v==="transfer"?"Transfer":v==="qris"?"QRIS":v==="credit"?"Piutang":v==="non_cash"?"Non-Tunai (Catatan Lama)":"Belum Tercatat"}
 function itemWeights(item={}){return weights(item.timbangan||item.weights)}
 function itemTotal(item={}){return itemWeights(item).reduce((a,b)=>a+b,0)}
 function groupTotal(group={}){return (group.items||[]).reduce((s,i)=>s+itemTotal(i),0)}
