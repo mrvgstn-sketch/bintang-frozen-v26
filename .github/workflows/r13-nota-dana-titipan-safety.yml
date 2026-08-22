@@ -26,9 +26,13 @@ jobs:
           node --check assets/js/nota-dana-titipan.js
           node --check assets/js/nota-dana-titipan-controls.js
           node --check assets/js/nota-dana-titipan-signature-hardening.js
+          node --check assets/js/customer-pic-setoran-history.js
           node --check tests/r13-setoran-single-writer.js
+          node --check tests/r13-customer-pic-setoran-history.js
       - name: Setoran single-writer logic
         run: node tests/r13-setoran-single-writer.js
+      - name: Customer PIC and Setoran history logic
+        run: node tests/r13-customer-pic-setoran-history.js
       - name: Architecture guards
         run: |
           ! grep -E "bf_keluar_v26|bf_masuk_v26|inventory_movements|bf_state_items" assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js assets/js/customer-funds.js
@@ -67,11 +71,15 @@ jobs:
           grep -q "bf_cf_propose_deposit_use" assets/js/customer-funds.js
           grep -q "bf_cf_reverse_payout" assets/js/customer-funds.js
           grep -q "Tanda Tangan Penerima — wajib" assets/js/customer-funds.js
+          grep -q "Pilih Customer Aktif" assets/js/customer-pic-setoran-history.js
+          grep -q "Kelompok Metode" assets/js/customer-pic-setoran-history.js
+          grep -q "customer_name_snapshot" assets/js/customer-pic-setoran-history.js
+          grep -q "bf-v26-customer-pic-setoran-history" index.html
       - name: Migration filenames are strictly ordered
         run: |
           test "$(find supabase/migrations -maxdepth 1 -type f -name '2026082200*_r13_*.sql' -printf '%f\n' | sort | tr '\n' ' ')" = "202608220001_r13_legacy_cfc_retirement.sql 202608220010_r13_nota_dana_titipan.sql 202608220020_r13_nota_dana_titipan_hardening.sql 202608220030_r13_nota_dana_titipan_workflow_controls.sql 202608220040_r13_nota_dana_titipan_cash_hardening.sql 202608220050_r13_nota_dana_titipan_signature_hardening.sql 202608220060_r13_customer_funds_foundation.sql 202608220070_r13_customer_funds_lifecycle.sql "
       - name: Source snapshot SHA-256
-        run: sha256sum assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical.js assets/js/customer-funds.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js supabase/migrations/2026082200*_r13_*.sql tests/r13-nota-dana-titipan*.sql tests/r13-customer-funds-*.sql tests/r13-setoran-single-writer.js
+        run: sha256sum index.html assets/js/menu.js assets/js/schema-migrations.js assets/js/setoran-canonical.js assets/js/customer-funds.js assets/js/nota-dana-titipan.js assets/js/nota-dana-titipan-controls.js assets/js/nota-dana-titipan-signature-hardening.js assets/js/customer-pic-setoran-history.js supabase/migrations/2026082200*_r13_*.sql tests/r13-nota-dana-titipan*.sql tests/r13-customer-funds-*.sql tests/r13-setoran-single-writer.js tests/r13-customer-pic-setoran-history.js
 
   postgres-integration:
     name: PostgreSQL integration harness
