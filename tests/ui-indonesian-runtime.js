@@ -38,4 +38,8 @@ assert.strictEqual(ui.translatePattern('Dashboard',true),'Ringkasan');
 assert.strictEqual(ui.translatePattern('Item',false),'Item','business data outside label context must be preserved');
 assert.strictEqual(ui.translatePattern('Item',true),'Barang');
 
-console.log('UI Indonesian runtime presentation tests: 13 passed');
+function fakeSelect(id){return {tagName:'SELECT',id,className:'',getAttribute(){return null},closest(){return null}}}
+assert.strictEqual(ui.statusContext({tagName:'OPTION',parentElement:fakeSelect('cf-diff')}),true,'difference-type options must be treated as status presentation');
+assert.strictEqual(ui.statusContext({tagName:'OPTION',parentElement:fakeSelect('product-select')}),false,'ordinary product options must not be treated as raw status enums');
+
+console.log('UI Indonesian runtime presentation tests: 15 passed');
