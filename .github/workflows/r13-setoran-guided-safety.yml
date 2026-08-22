@@ -1,0 +1,79 @@
+name: R13 Setoran Guided Safety
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  guided-static:
+    name: Guided Setoran static safety
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and logic checks
+        run: |
+          node --check assets/js/setoran-canonical.js
+          node --check assets/js/customer-pic-setoran-history.js
+          node --check tests/r13-customer-pic-setoran-history.js
+          node tests/r13-setoran-single-writer.js
+          node tests/r13-customer-pic-setoran-history.js
+      - name: Existing-base and no-duplicate guards
+        run: |
+          grep -q "bf_note_setoran_v26" assets/js/setoran-canonical.js
+          grep -q "bf_cf_record_case" assets/js/setoran-canonical.js
+          grep -q "bf_cf_submit_setoran_flow" assets/js/setoran-canonical.js
+          grep -q "Nominal Komisi tidak dapat diedit" assets/js/setoran-canonical.js
+          grep -q "Pilih Customer Aktif" assets/js/setoran-canonical.js
+          grep -q "Perlu Perhatian Anda" assets/js/customer-pic-setoran-history.js
+          grep -q "source_mode='SETORAN_GUIDED'" supabase/migrations/202608221000_r13_setoran_commission_guided.sql
+          ! grep -E "setoran_v2|customer_v2|commission_v2" assets/js/setoran-canonical.js assets/js/customer-pic-setoran-history.js supabase/migrations/202608221000_r13_setoran_commission_guided.sql
+          ! grep -E "actual_sender.*input|Actual Sender" assets/js/setoran-canonical.js
+
+  guided-postgres:
+    name: Guided Setoran PostgreSQL integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y postgresql-client
+      - name: Prepare existing R13 schema
+        working-directory: tests
+        run: |
+          sed -i 's#20260822_r13_nota_dana_titipan.sql#202608220010_r13_nota_dana_titipan.sql#;s#20260822_r13_nota_dana_titipan_hardening.sql#202608220020_r13_nota_dana_titipan_hardening.sql#' r13-nota-dana-titipan.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f r13-nota-dana-titipan.sql
+      - name: Apply existing workflow and Customer Funds schema
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220030_r13_nota_dana_titipan_workflow_controls.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220040_r13_nota_dana_titipan_cash_hardening.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220050_r13_nota_dana_titipan_signature_hardening.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220060_r13_customer_funds_foundation.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608220070_r13_customer_funds_lifecycle.sql
+      - name: Apply guided Setoran migration
+        run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608221000_r13_setoran_commission_guided.sql
+      - name: Run guided Setoran lifecycle tests
+        working-directory: tests
+        run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f r13-setoran-commission-guided.sql
+      - name: Migration replay idempotency
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres -f supabase/migrations/202608221000_r13_setoran_commission_guided.sql
+          psql -At -h localhost -U postgres -d postgres -c "select count(*)=1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='bf_cf_submit_setoran_flow';" | grep -qx 't'
