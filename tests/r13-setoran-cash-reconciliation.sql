@@ -1,16 +1,10 @@
 \set ON_ERROR_STOP on
 
 create or replace function public.r13_cash_assert(ok boolean,msg text) returns void language plpgsql as $$begin if not ok then raise exception 'R13_CASH_ASSERT: %',msg;end if;end$$;
-
-create table if not exists public.bf_state_items(
-  store_code text not null,
-  state_key text not null,
-  value text not null,
-  revision bigint not null default 1,
-  updated_at timestamptz not null default now(),
-  updated_by uuid,
-  primary key(store_code,state_key)
-);
+create or replace function public.r13_expect_split_total_error(p_case uuid) returns void language plpgsql as $$begin begin perform public.bf_cf_submit_setoran(p_case,'CUST-S','Customer Split',500000,current_date,'[{"method":"TRANSFER","amount":300000,"destination_account":"KALBAR"},{"method":"TUNAI","amount":100000}]'::jsonb,'[500000]'::jsonb,false,null,'split-bad-total');raise exception 'expected CF_PAYMENT_COMPONENT_TOTAL_MISMATCH';exception when others then if sqlerrm not like '%CF_PAYMENT_COMPONENT_TOTAL_MISMATCH%' then raise;end if;end;end$$;
+create or replace function public.r13_expect_admin_review_denied(p_recon uuid,p_revision bigint) returns void language plpgsql as $$begin begin perform public.bf_cash_review_reconciliation(p_recon,'APPROVE',null,p_revision);raise exception 'expected owner permission';exception when sqlstate '42501' then null;end;end$$;
+create or replace function public.r13_expect_stale_submit(p_date date,p_revision bigint) returns void language plpgsql as $$begin begin perform public.bf_cash_submit_reconciliation(p_date,'BINTANG-Y70M',500000,1000000,0,0,0,0,1300000,'stale',p_revision);raise exception 'expected CASH_STALE_REVISION';exception when others then if sqlerrm not like '%CASH_STALE_REVISION%' then raise;end if;end;end$$;
+create or replace function public.r13_expect_final_lock(p_date date) returns void language plpgsql as $$begin begin perform public.bf_cash_submit_reconciliation(p_date,'BINTANG-Y70M',500000,1000000,0,0,0,0,1300000,'must remain locked',null);raise exception 'expected final lock';exception when others then if sqlerrm not like '%CASH_RECONCILIATION_FINAL_LOCKED%' then raise;end if;end;end$$;
 
 -- ----------------------------------------------------------------
 -- Split Setoran: one business event, multiple payment components.
@@ -31,35 +25,11 @@ select (public.bf_cf_record_case('SET-COMPAT-001','CUST-S','Customer Split',1000
 select public.bf_cf_submit_setoran_flow(:'compat_case'::uuid,'CUST-S','Customer Split',100000,current_date,'TUNAI',null,'[100000]'::jsonb,false,null,'compat-flow-001');
 select public.r13_cash_assert((select jsonb_array_length(payment_components)=1 and payment_components->0->>'method'='TUNAI' from public.bf_customer_fund_cases where id=:'compat_case'::uuid),'legacy submit delegates to one component');
 
-do $$begin
-  begin
-    perform public.bf_cf_submit_setoran(
-      :'split_case'::uuid,'CUST-S','Customer Split',500000,current_date,
-      '[{"method":"TRANSFER","amount":300000,"destination_account":"KALBAR"},{"method":"TUNAI","amount":100000}]'::jsonb,
-      '[500000]'::jsonb,false,null,'split-bad-total'
-    );
-    raise exception 'expected CF_PAYMENT_COMPONENT_TOTAL_MISMATCH';
-  exception when others then
-    if sqlerrm not like '%CF_PAYMENT_COMPONENT_TOTAL_MISMATCH%' then raise; end if;
-  end;
-end$$;
-
-do $$begin
-  begin
-    perform public.bf_cf_payment_components_total('[{"method":"TRANSFER","amount":100000}]'::jsonb);
-    raise exception 'expected CF_PAYMENT_COMPONENT_ACCOUNT_REQUIRED';
-  exception when others then
-    if sqlerrm not like '%CF_PAYMENT_COMPONENT_ACCOUNT_REQUIRED%' then raise; end if;
-  end;
-end$$;
+select public.r13_expect_split_total_error(:'split_case'::uuid);
+do $$begin begin perform public.bf_cf_payment_components_total('[{"method":"TRANSFER","amount":100000}]'::jsonb);raise exception 'expected CF_PAYMENT_COMPONENT_ACCOUNT_REQUIRED';exception when others then if sqlerrm not like '%CF_PAYMENT_COMPONENT_ACCOUNT_REQUIRED%' then raise;end if;end;end$$;
 
 -- Admin cannot cancel; Owner can controlled-reverse when no downstream financial effect.
-do $$begin
-  begin
-    perform public.bf_cf_cancel_setoran('SET-SPLIT-001','admin must not cancel',null);
-    raise exception 'expected permission denied';
-  exception when sqlstate '42501' then null; end;
-end$$;
+do $$begin begin perform public.bf_cf_cancel_setoran('SET-SPLIT-001','admin must not cancel',null);raise exception 'expected permission denied';exception when sqlstate '42501' then null;end;end$$;
 reset role;
 set role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111',false);
@@ -81,7 +51,6 @@ values('BINTANG-Y70M','bf_expenses',jsonb_build_array(
 )::text,7)
 on conflict(store_code,state_key) do update set value=excluded.value,revision=excluded.revision;
 
--- A fake Customer Setoran cash movement must not become cash-in.
 insert into public.bf_cash_movements(movement_date,direction,movement_type,amount,source_ref_type,source_ref_id,description,created_by)
 values(current_date,'IN','CUSTOMER_SETORAN',999999,'TEST','SETORAN-NOT-CASH-IN','must be ignored','11111111-1111-1111-1111-111111111111');
 
@@ -94,42 +63,20 @@ select (public.bf_cash_submit_reconciliation(current_date,'BINTANG-Y70M',500000,
 select revision as recon_rev from public.bf_cash_reconciliations where id=:'recon_id'::uuid \gset
 select public.r13_cash_assert((select status='SUBMITTED' and expense_total_snapshot=100000 and expected_cash=1400000 and physical_cash=1300000 and difference=-100000 and verified_by is null from public.bf_cash_reconciliations where id=:'recon_id'::uuid),'admin submits server-derived reconciliation');
 select public.r13_cash_assert((select expense_source_revision=7 and jsonb_array_length(expense_source_items)=1 from public.bf_cash_reconciliations where id=:'recon_id'::uuid),'reconciliation stores expense source revision and references');
+select public.r13_expect_admin_review_denied(:'recon_id'::uuid,:'recon_rev'::bigint);
 
-do $$begin
-  begin
-    perform public.bf_cash_review_reconciliation(:'recon_id'::uuid,'APPROVE',null,:'recon_rev'::bigint);
-    raise exception 'expected owner permission';
-  exception when sqlstate '42501' then null; end;
-end$$;
-
--- Stale revision protects concurrent resubmit.
 select public.bf_cash_submit_reconciliation(current_date,'BINTANG-Y70M',500000,1000000,0,0,0,0,1300000,'Admin resubmit',:'recon_rev'::bigint) as resubmit \gset
 select revision as recon_rev2 from public.bf_cash_reconciliations where id=:'recon_id'::uuid \gset
-do $$begin
-  begin
-    perform public.bf_cash_submit_reconciliation(current_date,'BINTANG-Y70M',500000,1000000,0,0,0,0,1300000,'stale',:'recon_rev'::bigint);
-    raise exception 'expected CASH_STALE_REVISION';
-  exception when others then
-    if sqlerrm not like '%CASH_STALE_REVISION%' then raise; end if;
-  end;
-end$$;
+select public.r13_expect_stale_submit(current_date,:'recon_rev'::bigint);
 
 reset role;
 set role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111',false);
 select public.bf_cash_review_reconciliation(:'recon_id'::uuid,'APPROVE','Sudah diperiksa',:'recon_rev2'::bigint);
 select public.r13_cash_assert((select status='VERIFIED' and verified_by='11111111-1111-1111-1111-111111111111'::uuid from public.bf_cash_reconciliations where id=:'recon_id'::uuid),'Owner final approval');
+select public.r13_expect_final_lock(current_date);
 
-do $$begin
-  begin
-    perform public.bf_cash_submit_reconciliation(current_date,'BINTANG-Y70M',500000,1000000,0,0,0,0,1300000,'must remain locked',null);
-    raise exception 'expected final lock';
-  exception when others then
-    if sqlerrm not like '%CASH_RECONCILIATION_FINAL_LOCKED%' then raise; end if;
-  end;
-end$$;
-
--- Legacy RPC ignores the manual expense argument and derives expense from canonical bf_expenses.
+-- Legacy RPC ignores the old manual expense argument and delegates to the canonical writer.
 reset role;
 insert into public.bf_state_items(store_code,state_key,value,revision)
 values('BINTANG-Y70M','bf_expenses',jsonb_build_array(
