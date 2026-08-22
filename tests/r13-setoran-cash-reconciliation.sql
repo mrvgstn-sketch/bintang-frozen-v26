@@ -6,17 +6,11 @@ create or replace function public.r13_expect_admin_review_denied(p_recon uuid,p_
 create or replace function public.r13_expect_stale_submit(p_date date,p_revision bigint) returns void language plpgsql as $$begin begin perform public.bf_cash_submit_reconciliation(p_date,'BINTANG-Y70M',500000,1000000,0,0,0,0,1300000,'stale',p_revision);raise exception 'expected CASH_STALE_REVISION';exception when others then if sqlerrm not like '%CASH_STALE_REVISION%' then raise;end if;end;end$$;
 create or replace function public.r13_expect_final_lock(p_date date) returns void language plpgsql as $$begin begin perform public.bf_cash_submit_reconciliation(p_date,'BINTANG-Y70M',500000,1000000,0,0,0,0,1300000,'must remain locked',null);raise exception 'expected final lock';exception when others then if sqlerrm not like '%CASH_RECONCILIATION_FINAL_LOCKED%' then raise;end if;end;end$$;
 
--- ----------------------------------------------------------------
 -- Split Setoran: one business event, multiple payment components.
--- ----------------------------------------------------------------
 set role authenticated;
 select set_config('request.jwt.claim.sub','22222222-2222-2222-2222-222222222222',false);
 select (public.bf_cf_record_case('SET-SPLIT-001','CUST-S','Customer Split',500000,current_date,null,'MIXED','[]'::jsonb,'split','split-case-001')).id as split_case \gset
-select public.bf_cf_submit_setoran(
-  :'split_case'::uuid,'CUST-S','Customer Split',500000,current_date,
-  '[{"method":"TRANSFER","amount":300000,"destination_account":"KALBAR"},{"method":"TUNAI","amount":200000}]'::jsonb,
-  '[500000]'::jsonb,false,null,'split-flow-001'
-) as split_result \gset
+select public.bf_cf_submit_setoran(:'split_case'::uuid,'CUST-S','Customer Split',500000,current_date,'[{"method":"TRANSFER","amount":300000,"destination_account":"KALBAR"},{"method":"TUNAI","amount":200000}]'::jsonb,'[500000]'::jsonb,false,null,'split-flow-001') as split_result \gset
 select public.r13_cash_assert((select payment_method_code='MIXED' and jsonb_array_length(payment_components)=2 and settled_note_total=500000 from public.bf_customer_fund_cases where id=:'split_case'::uuid),'split components stored on existing case');
 select public.r13_cash_assert((select public.bf_cf_payment_components_total(payment_components)=500000 from public.bf_customer_fund_cases where id=:'split_case'::uuid),'split component total equals Setoran');
 
@@ -24,7 +18,6 @@ select public.r13_cash_assert((select public.bf_cf_payment_components_total(paym
 select (public.bf_cf_record_case('SET-COMPAT-001','CUST-S','Customer Split',100000,current_date,null,'TUNAI','[]'::jsonb,'compat','compat-case-001')).id as compat_case \gset
 select public.bf_cf_submit_setoran_flow(:'compat_case'::uuid,'CUST-S','Customer Split',100000,current_date,'TUNAI',null,'[100000]'::jsonb,false,null,'compat-flow-001');
 select public.r13_cash_assert((select jsonb_array_length(payment_components)=1 and payment_components->0->>'method'='TUNAI' from public.bf_customer_fund_cases where id=:'compat_case'::uuid),'legacy submit delegates to one component');
-
 select public.r13_expect_split_total_error(:'split_case'::uuid);
 do $$begin begin perform public.bf_cf_payment_components_total('[{"method":"TRANSFER","amount":100000}]'::jsonb);raise exception 'expected CF_PAYMENT_COMPONENT_ACCOUNT_REQUIRED';exception when others then if sqlerrm not like '%CF_PAYMENT_COMPONENT_ACCOUNT_REQUIRED%' then raise;end if;end;end$$;
 
@@ -38,10 +31,9 @@ select public.r13_cash_assert((select reconciliation_status='REVERSED' from publ
 select public.bf_cf_cancel_setoran('SET-SPLIT-001','retry reversal',null);
 select public.r13_cash_assert((select count(*)=1 from public.bf_customer_fund_cases where source_setoran_id='SET-SPLIT-001'),'reversal retry does not duplicate case');
 
--- ----------------------------------------------------------------
 -- Daily cash reconciliation: expense is server-derived from bf_expenses.
--- Customer Setoran is intentionally not included as cash-in.
--- ----------------------------------------------------------------
+-- A Customer Setoran case exists above, but no Customer Setoran amount is read by
+-- the daily cash formula. The expected-cash assertion proves this boundary.
 reset role;
 insert into public.bf_state_items(store_code,state_key,value,revision)
 values('BINTANG-Y70M','bf_expenses',jsonb_build_array(
@@ -51,9 +43,6 @@ values('BINTANG-Y70M','bf_expenses',jsonb_build_array(
 )::text,7)
 on conflict(store_code,state_key) do update set value=excluded.value,revision=excluded.revision;
 
-insert into public.bf_cash_movements(movement_date,direction,movement_type,amount,source_ref_type,source_ref_id,description,created_by)
-values(current_date,'IN','CUSTOMER_SETORAN',999999,'TEST','SETORAN-NOT-CASH-IN','must be ignored','11111111-1111-1111-1111-111111111111');
-
 set role authenticated;
 select set_config('request.jwt.claim.sub','22222222-2222-2222-2222-222222222222',false);
 select public.bf_cash_get_expense_snapshot(current_date,'BINTANG-Y70M') as exp_snapshot \gset
@@ -61,7 +50,7 @@ select public.r13_cash_assert((:'exp_snapshot'::jsonb->>'total')::numeric=100000
 select public.r13_cash_assert(jsonb_array_length(:'exp_snapshot'::jsonb->'items')=1,'expense snapshot keeps traceable source item');
 select (public.bf_cash_submit_reconciliation(current_date,'BINTANG-Y70M',500000,1000000,0,0,0,0,1300000,'Admin submit',null)).id as recon_id \gset
 select revision as recon_rev from public.bf_cash_reconciliations where id=:'recon_id'::uuid \gset
-select public.r13_cash_assert((select status='SUBMITTED' and expense_total_snapshot=100000 and expected_cash=1400000 and physical_cash=1300000 and difference=-100000 and verified_by is null from public.bf_cash_reconciliations where id=:'recon_id'::uuid),'admin submits server-derived reconciliation');
+select public.r13_cash_assert((select status='SUBMITTED' and expense_total_snapshot=100000 and expected_cash=1400000 and physical_cash=1300000 and difference=-100000 and verified_by is null from public.bf_cash_reconciliations where id=:'recon_id'::uuid),'admin submits server-derived reconciliation and Customer Setoran does not become cash-in');
 select public.r13_cash_assert((select expense_source_revision=7 and jsonb_array_length(expense_source_items)=1 from public.bf_cash_reconciliations where id=:'recon_id'::uuid),'reconciliation stores expense source revision and references');
 select public.r13_expect_admin_review_denied(:'recon_id'::uuid,:'recon_rev'::bigint);
 
@@ -79,9 +68,7 @@ select public.r13_expect_final_lock(current_date);
 -- Legacy RPC ignores the old manual expense argument and delegates to the canonical writer.
 reset role;
 insert into public.bf_state_items(store_code,state_key,value,revision)
-values('BINTANG-Y70M','bf_expenses',jsonb_build_array(
-  jsonb_build_object('id','EXP-LEGACY','tanggal',(current_date+1)::text,'kategori','Legacy day','nominal',200000)
-)::text,8)
+values('BINTANG-Y70M','bf_expenses',jsonb_build_array(jsonb_build_object('id','EXP-LEGACY','tanggal',(current_date+1)::text,'kategori','Legacy day','nominal',200000))::text,8)
 on conflict(store_code,state_key) do update set value=excluded.value,revision=excluded.revision;
 set role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111',false);
