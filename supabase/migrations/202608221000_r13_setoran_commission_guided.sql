@@ -116,7 +116,7 @@ begin
       ) returning * into x;
     else
       update public.bf_customer_fund_classifications
-      set gross_amount=diff,customer_bank_fee_amount=0,net_amount=diff,
+      set gross_amount=diff,customer_bank_fee_amount=0,
           agreement_note=btrim(p_agreement),status='PENDING_OWNER',
           proposed_by=auth.uid(),proposed_at=now(),decided_by=null,decided_at=null,
           decision_note=null,owner_bank_fee_amount=0,owner_bank_fee_bearer='NONE'
@@ -228,7 +228,6 @@ begin
   update public.bf_customer_fund_classifications
     set gross_amount=calc,
         customer_bank_fee_amount=case when bearer='CUSTOMER' then fee else 0 end,
-        net_amount=net,
         owner_bank_fee_amount=fee,
         owner_bank_fee_bearer=bearer,
         status='APPROVED',decision_note=p_note,decided_by=auth.uid(),decided_at=now()
