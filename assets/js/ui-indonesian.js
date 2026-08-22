@@ -137,6 +137,7 @@ const SENTENCES=new Map(Object.entries({
 
 const TECHNICAL=/\b(?:SQL|RPC|Supabase|backend|schema|migration|payload|constraint|stack trace|R13[A-Z0-9-]*|ACK|timestamp|flag Online)\b/i;
 const RAW_ENUM=/^[A-Z][A-Z0-9_]{2,}$/;
+const STATUS_CONTEXT=/(?:status|badge|state|method|metode|difference|selisih|type|jenis|recon|cash|payment|pembayaran|delivery|pengantaran|classification|klasifikasi|obligation|kewajiban|payout|deposit|refund)/i;
 const SKIP_TAGS=new Set(["SCRIPT","STYLE","CODE","PRE","TEXTAREA"]);
 const ATTRS=["placeholder","title","aria-label"];
 
@@ -192,7 +193,12 @@ function translateStatus(value){
   if(RAW_ENUM.test(core)&&core.includes("_"))return preserveWhitespace(original,"Status tidak dikenali");
   return translatePattern(original);
 }
-function translate(value){return translateStatus(value)}
+function statusContext(el){
+  if(!el)return false;
+  if(el.tagName==="OPTION")return true;
+  return STATUS_CONTEXT.test([el.id,el.className,el.getAttribute?.("name"),el.getAttribute?.("data-status"),el.getAttribute?.("data-state")].filter(Boolean).join(" "));
+}
+function translate(value){return translatePattern(value)}
 
 function shouldTranslateTextNode(node){
   const p=node?.parentElement;if(!p||SKIP_TAGS.has(p.tagName))return false;
@@ -202,11 +208,12 @@ function shouldTranslateTextNode(node){
 function translateNode(node){
   if(node.nodeType===Node.TEXT_NODE){
     if(!shouldTranslateTextNode(node))return;
-    const next=translate(node.nodeValue);if(next!==node.nodeValue)node.nodeValue=next;return;
+    const parent=node.parentElement,next=statusContext(parent)?translateStatus(node.nodeValue):translatePattern(node.nodeValue);
+    if(next!==node.nodeValue)node.nodeValue=next;return;
   }
   if(node.nodeType!==Node.ELEMENT_NODE)return;
   const el=node;if(SKIP_TAGS.has(el.tagName)||el.matches("[data-bf-ui-no-translate],[contenteditable='true']")||el.closest("[data-bf-ui-no-translate],[contenteditable='true']"))return;
-  for(const attr of ATTRS){if(el.hasAttribute(attr)){const old=el.getAttribute(attr),next=translate(old);if(next!==old)el.setAttribute(attr,next)}}
+  for(const attr of ATTRS){if(el.hasAttribute(attr)){const old=el.getAttribute(attr),next=translatePattern(old);if(next!==old)el.setAttribute(attr,next)}}
   for(const child of [...el.childNodes])translateNode(child);
 }
 function translateTree(root=document.body){if(root)translateNode(root)}
